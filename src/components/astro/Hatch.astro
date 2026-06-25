@@ -1,0 +1,17 @@
+---
+interface Props {
+  class?: string;
+  label?: string;
+}
+const { class: className = "", label = "" } = Astro.props;
+---
+
+<div
+  class:list={[
+    "flex items-center justify-center text-[9px] font-mono text-[#9a9a9a] rounded",
+    className,
+  ]}
+  style="background: repeating-linear-gradient(45deg,#ececec,#ececec 7px,#f5f5f5 7px,#f5f5f5 14px)"
+>
+  {label}
+</div>
