@@ -1,0 +1,10 @@
+---
+import Layout from "../layouts/Layout.astro";
+import App from "../App";
+---
+
+<Layout title="packetcraft">
+  {/* Phase 2: the existing React SPA runs as a single client island.
+      Later phases replace this with static .astro pages + small islands. */}
+  <App client:only="react" />
+</Layout>
