@@ -3,22 +3,16 @@ import { StatusBadge } from "../components/primitives/StatusBadge";
 import { Tag } from "../components/primitives/Tag";
 import { TerminalSnippet } from "../components/primitives/TerminalSnippet";
 
-export function ProjectDetailPage({
-  projectId,
-  onBack,
-}: {
-  projectId: string;
-  onBack: () => void;
-}) {
+export function ProjectDetailPage({ projectId }: { projectId: string }) {
   const p = projects.find((x) => x.id === projectId) ?? projects[0];
   return (
     <main className="max-w-5xl mx-auto px-6 py-12">
-      <button
-        onClick={onBack}
-        className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors mb-5 cursor-pointer"
+      <a
+        href="/projects"
+        className="inline-block text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors mb-5 cursor-pointer"
       >
         ← projects / {p.name}
-      </button>
+      </a>
 
       <div className="flex items-center gap-3 mb-3">
         <h1 className="font-bold font-mono text-2xl text-foreground">{p.name}</h1>

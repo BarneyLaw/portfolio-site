@@ -5,7 +5,7 @@ import { Hatch } from "../components/primitives/Hatch";
 
 type ProjectFilter = "all" | ProjectStatus;
 
-export function ProjectsPage({ onSelect }: { onSelect: (id: string) => void }) {
+export function ProjectsPage() {
   const [filter, setFilter] = useState<ProjectFilter>("all");
   const visible =
     filter === "all" ? projects : projects.filter((p) => p.status === filter);
@@ -36,10 +36,10 @@ export function ProjectsPage({ onSelect }: { onSelect: (id: string) => void }) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         {visible.map((p) => (
-          <button
+          <a
             key={p.id}
-            onClick={() => onSelect(p.id)}
-            className="bg-card border border-border rounded overflow-hidden text-left hover:border-primary/50 transition-colors group"
+            href={`/projects/${p.id}`}
+            className="block bg-card border border-border rounded overflow-hidden text-left hover:border-primary/50 transition-colors group"
           >
             <Hatch className="h-24 w-full" label="screenshot" />
             <div className="p-4">
@@ -56,7 +56,7 @@ export function ProjectsPage({ onSelect }: { onSelect: (id: string) => void }) {
                 {p.meta}
               </div>
             </div>
-          </button>
+          </a>
         ))}
       </div>
     </main>

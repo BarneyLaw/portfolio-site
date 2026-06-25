@@ -1,5 +1,7 @@
 ---
 import "../styles/index.css";
+import Nav from "../components/astro/Nav.astro";
+import Footer from "../components/astro/Footer.astro";
 
 interface Props {
   title?: string;
@@ -26,8 +28,39 @@ const {
         margin: 0;
       }
     </style>
+    {/* Apply the saved theme before paint to avoid a flash of the wrong mode. */}
+    <script is:inline>
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (
+            t === "dark" ||
+            (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)
+          ) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body>
-    <slot />
+  <body
+    class="min-h-screen flex flex-col bg-background text-foreground font-mono"
+    style="font-family: 'Space Mono', monospace"
+  >
+    <Nav />
+    <div class="flex-1">
+      <slot />
+    </div>
+    <Footer />
+
+    <script>
+      const btn = document.getElementById("theme-toggle");
+      btn?.addEventListener("click", () => {
+        const dark = document.documentElement.classList.toggle("dark");
+        try {
+          localStorage.setItem("theme", dark ? "dark" : "light");
+        } catch (e) {}
+      });
+    </script>
   </body>
 </html>
