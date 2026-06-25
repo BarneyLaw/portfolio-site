@@ -1,0 +1,54 @@
+---
+const path = Astro.url.pathname;
+const links = [
+  { label: "Projects", href: "/projects" },
+  { label: "Blog", href: "/blog" },
+  { label: "Reviews", href: "/reviews" },
+  { label: "About", href: "/about" },
+];
+const isActive = (href: string) => path === href || path.startsWith(href + "/");
+---
+
+<header
+  class="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm"
+>
+  <nav class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+      <div
+        class="w-7 h-7 rounded-md text-[11px] bg-primary flex items-center justify-center font-bold font-mono text-white flex-shrink-0"
+      >
+        &gt;_
+      </div>
+      <div class="flex flex-col leading-[1.05]">
+        <span class="font-bold font-mono text-foreground text-[13px]">packetcraft</span>
+        <span class="font-mono text-muted-foreground text-[9px]">.dev</span>
+      </div>
+    </a>
+    <div class="flex items-center gap-5">
+      {
+        links.map((l) => (
+          <a
+            href={l.href}
+            class:list={[
+              "text-[13px] font-mono transition-colors",
+              isActive(l.href)
+                ? "text-primary border-b-2 border-primary pb-0.5"
+                : "text-muted-foreground hover:text-foreground",
+            ]}
+          >
+            {l.label}
+          </a>
+        ))
+      }
+      <button
+        id="theme-toggle"
+        aria-label="Toggle dark mode"
+        class="w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer bg-[#d9d2c2] dark:bg-primary"
+      >
+        <span
+          class="absolute top-1 w-4 h-4 rounded-full transition-all left-1 bg-white dark:left-auto dark:right-1 dark:bg-[#12151f]"
+        ></span>
+      </button>
+    </div>
+  </nav>
+</header>

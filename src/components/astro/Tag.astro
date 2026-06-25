@@ -1,0 +1,15 @@
+---
+interface Props {
+  muted?: boolean;
+}
+const { muted = false } = Astro.props;
+---
+
+<span
+  class:list={[
+    "text-[9px] font-mono px-1.5 py-0.5 rounded border",
+    muted ? "text-[#7a6f55] border-[#c9bd9f]" : "text-primary border-primary",
+  ]}
+>
+  <slot />
+</span>

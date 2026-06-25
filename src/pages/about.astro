@@ -1,0 +1,75 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Hatch from "../components/astro/Hatch.astro";
+import Tag from "../components/astro/Tag.astro";
+
+const stack = [
+  "Go",
+  "C++",
+  "k3s",
+  "Postgres",
+  "Ansible",
+  "networking",
+  "Arch Linux",
+  "Ubuntu Server",
+];
+const links = ["github ↗", "email ↗", "rss ↗"];
+---
+
+<Layout title="about · packetcraft">
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <div class="flex gap-6 items-start mb-8">
+      <Hatch
+        class="w-24 h-24 flex-none rounded-lg border-2 border-dashed border-muted"
+        label="portrait"
+      />
+      <div class="flex-1">
+        <h1 class="font-bold font-mono text-3xl text-foreground mb-3">about</h1>
+        <p class="text-[13px] font-mono text-foreground/80 leading-[1.8]">
+          I'm a self-taught tinkerer based somewhere with fast internet and a
+          suspiciously large number of network switches. I work on networking
+          infrastructure by day and run a homelab by night.
+        </p>
+      </div>
+    </div>
+
+    <div class="text-[13px] font-mono text-foreground/80 leading-[1.8] mb-8">
+      <p>
+        This site documents things I build, hardware I test, and observations I
+        want to write down somewhere. It runs on a 4-node k3s cluster in my
+        basement and serves as both a portfolio and a way to force myself to
+        explain things clearly.
+      </p>
+    </div>
+
+    {/* Stack */}
+    <div class="mb-8">
+      <div class="text-[11px] font-mono text-muted-foreground mb-3">// stack</div>
+      <div class="flex flex-wrap gap-2">
+        {stack.map((t) => <Tag>{t}</Tag>)}
+      </div>
+    </div>
+
+    {/* Now */}
+    <div
+      class="bg-card border border-border border-l-[3px] border-l-primary rounded p-4 mb-8"
+    >
+      <div class="text-[10px] font-mono text-primary mb-2">// now</div>
+      <p class="text-[12px] font-mono text-foreground/80 leading-[1.7]">
+        Migrating personal services to the k3s cluster · writing obsync ·
+        playing Warframe badly
+      </p>
+    </div>
+
+    {/* Links */}
+    <div class="flex gap-5">
+      {
+        links.map((l) => (
+          <span class="text-[12px] font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer">
+            {l}
+          </span>
+        ))
+      }
+    </div>
+  </main>
+</Layout>

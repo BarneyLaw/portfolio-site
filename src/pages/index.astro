@@ -1,10 +1,150 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import App from "../App";
+import Cursor from "../components/astro/Cursor.astro";
+import Hatch from "../components/astro/Hatch.astro";
+import Tag from "../components/astro/Tag.astro";
+import Sprite from "../components/astro/Sprite.astro";
+
+const recent = [
+  {
+    tag: "PROJECT",
+    label: "relic overlay — SHIPPED",
+    sub: "Warframe market overlay using Electron + WF.Market API",
+    muted: false,
+  },
+  {
+    tag: "BLOG",
+    label: "Dissecting my home network with nmap and Grafana",
+    sub: "2026-05-28 · 5 min · networking",
+    muted: true,
+  },
+  {
+    tag: "REVIEW",
+    label: "MikroTik RB5009 — RECOMMENDED",
+    sub: "The best sub-$200 router I've owned",
+    muted: true,
+  },
+];
+
+const navCards = ["projects", "blog", "reviews"];
 ---
 
 <Layout title="packetcraft">
-  {/* Phase 2: the existing React SPA runs as a single client island.
-      Later phases replace this with static .astro pages + small islands. */}
-  <App client:only="react" />
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    {/* Hero */}
+    <div class="mb-8">
+      <div
+        class="font-bold font-mono text-5xl text-foreground tracking-tight leading-none"
+      >
+        <span class="text-primary">&gt;</span> packetcraft
+        <Cursor large />
+      </div>
+      <div class="font-mono text-[13px] text-primary mt-3">
+        networks · gaming · systems
+      </div>
+    </div>
+
+    {/* Terminal whoami */}
+    <div
+      class="bg-[#12151f] rounded-lg px-6 py-5 font-mono text-[12px] leading-[1.8] mb-10"
+    >
+      <div>
+        <span class="text-[#3b82f6]">me@packetcraft</span>
+        <span class="text-[#8a93a6]">:~$ whoami</span>
+      </div>
+      <div class="text-[#f0eada]">
+        tinkerer · networks · games adjacent · self-host enjoyer
+      </div>
+      <div>
+        <span class="text-[#3b82f6]">me@packetcraft</span>
+        <span class="text-[#8a93a6]">:~$ uname -a</span>
+      </div>
+      <div class="text-[#f0eada]">
+        k3s on 4 nodes · arch + ubuntu · serving this site
+      </div>
+      <div class="mt-1">
+        <span class="text-[#3b82f6]">me@packetcraft</span>
+        <span class="text-[#8a93a6]">:~$ </span>
+        <span class="text-[#f0eada]">cat ./latest</span>
+        <Cursor />
+      </div>
+    </div>
+
+    {/* Featured */}
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-[11px] font-mono text-muted-foreground">// featured</span>
+      <span class="text-[9px] font-mono text-muted-foreground">
+        ▸ news · hardware drops · findings
+      </span>
+    </div>
+    <div
+      class="bg-card border border-border border-l-[3px] border-l-primary rounded-md overflow-hidden flex gap-4 p-4 mb-8"
+    >
+      <Hatch class="w-28 h-20 flex-none" label="cover" />
+      <div class="flex-1 min-w-0">
+        <div class="flex gap-2 items-center">
+          <span
+            class="text-[9px] font-mono text-primary border border-primary rounded px-1.5 py-0.5"
+          >
+            FEATURED
+          </span>
+          <span class="text-[9px] font-mono text-muted-foreground">2026-06-22</span>
+        </div>
+        <div
+          class="mt-3 font-bold font-mono text-[13px] text-foreground leading-snug"
+        >
+          k3s cluster: one year of lessons from running prod at home
+        </div>
+        <div
+          class="mt-2 text-[11px] font-mono text-muted-foreground leading-relaxed"
+        >
+          What broke, what held, and what I'd do differently if I started over today.
+        </div>
+      </div>
+    </div>
+
+    {/* Recent */}
+    <div class="text-[11px] font-mono text-muted-foreground mb-3">// recent</div>
+    <div class="flex flex-col gap-3 mb-10">
+      {
+        recent.map((item) => (
+          <div class="bg-card border border-border rounded p-3 flex gap-3 hover:border-primary/40 transition-colors cursor-pointer">
+            <Hatch class="w-14 h-14 flex-none" />
+            <div class="flex-1 min-w-0">
+              <Tag muted={item.muted}>{item.tag}</Tag>
+              <div class="mt-2 font-mono text-[12px] text-foreground font-bold leading-snug">
+                {item.label}
+              </div>
+              <div class="mt-1 text-[10px] font-mono text-muted-foreground">
+                {item.sub}
+              </div>
+            </div>
+          </div>
+        ))
+      }
+      <div class="flex items-center gap-2 pt-2 px-1">
+        <Sprite size={44} />
+        <span class="text-[10px] font-mono text-muted-foreground">
+          fetching more…
+        </span>
+      </div>
+    </div>
+
+    {/* Quick nav cards */}
+    <div class="grid grid-cols-3 gap-4">
+      {
+        navCards.map((id) => (
+          <a
+            href={`/${id}`}
+            class="bg-card border border-border rounded p-4 text-left hover:border-primary/50 hover:bg-primary/5 transition-all group block"
+          >
+            <div class="text-[11px] font-mono text-muted-foreground mb-1">→</div>
+            <div class="font-bold font-mono text-[13px] text-foreground group-hover:text-primary transition-colors">
+              {id}
+            </div>
+          </a>
+        ))
+      }
+    </div>
+  </main>
 </Layout>

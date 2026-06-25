@@ -1,0 +1,74 @@
+---
+const siteLinks = [
+  { label: "Projects", href: "/projects" },
+  { label: "Blog", href: "/blog" },
+  { label: "Reviews", href: "/reviews" },
+  { label: "About", href: "/about" },
+];
+const elsewhere = ["github ↗", "email ↗", "rss ↗"];
+---
+
+<footer class="bg-secondary border-t border-border">
+  <div class="max-w-5xl mx-auto px-6 py-8">
+    <div class="grid grid-cols-4 gap-6">
+      <div>
+        <a href="/" class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+          <div
+            class="w-7 h-7 rounded-md text-[11px] bg-primary flex items-center justify-center font-bold font-mono text-white flex-shrink-0"
+          >
+            &gt;_
+          </div>
+          <div class="flex flex-col leading-[1.05]">
+            <span class="font-bold font-mono text-foreground text-[13px]">packetcraft</span>
+            <span class="font-mono text-muted-foreground text-[9px]">.dev</span>
+          </div>
+        </a>
+        <p class="text-[11px] font-mono text-muted-foreground mt-3 leading-[1.6]">
+          tinkerer documenting homelab builds, networking experiments, and gaming-adjacent projects.
+        </p>
+      </div>
+      <div>
+        <div class="text-[9px] font-mono text-muted-foreground mb-3">/site</div>
+        <div class="flex flex-col gap-1.5">
+          {
+            siteLinks.map((l) => (
+              <a
+                href={l.href}
+                class="text-[11px] font-mono text-foreground/60 hover:text-foreground cursor-pointer transition-colors"
+              >
+                {l.label}
+              </a>
+            ))
+          }
+        </div>
+      </div>
+      <div>
+        <div class="text-[9px] font-mono text-muted-foreground mb-3">/elsewhere</div>
+        <div class="flex flex-col gap-1.5">
+          {
+            elsewhere.map((l) => (
+              <span class="text-[11px] font-mono text-foreground/60 hover:text-foreground cursor-pointer transition-colors">
+                {l}
+              </span>
+            ))
+          }
+        </div>
+      </div>
+      <div
+        class="border-2 border-dashed border-[#b8ad8d] rounded flex items-center justify-center p-3 text-center"
+      >
+        <span class="text-[9px] font-mono text-muted-foreground leading-[1.5]">
+          slot · add more later
+        </span>
+      </div>
+    </div>
+    <div class="mt-6 pt-4 border-t border-border flex justify-between">
+      <span class="text-[10px] font-mono text-muted-foreground">
+        © 2026 packetcraft · served by k3s @ home
+      </span>
+      <span class="text-[10px] font-mono text-muted-foreground">
+        uptime 99.4% · build #1284
+      </span>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,46 @@
+---
+// Walk-cycle loading sprite. Cycles frames with a tiny vanilla script — no
+// React runtime — so it can live on otherwise-static pages.
+interface Props {
+  size?: number;
+  fps?: number;
+}
+const { size = 44, fps = 10 } = Astro.props;
+
+const frames = Object.entries(
+  import.meta.glob(
+    "../../img/sprite_sheet/darjeeling_sprite_sheet/*.png",
+    { eager: true, query: "?url", import: "default" },
+  ) as Record<string, string>,
+)
+  .sort(([a], [b]) => {
+    const n = (s: string) => Number(s.match(/piece_(\d+)/)?.[1] ?? 0);
+    return n(a) - n(b);
+  })
+  .map(([, url]) => url);
+---
+
+<img
+  src={frames[0]}
+  data-sprite
+  data-frames={JSON.stringify(frames)}
+  data-fps={fps}
+  width={size}
+  height={size}
+  alt="loading"
+  class="flex-none object-contain"
+  style="image-rendering: pixelated"
+/>
+
+<script>
+  for (const el of document.querySelectorAll<HTMLImageElement>("img[data-sprite]")) {
+    const frames = JSON.parse(el.dataset.frames || "[]") as string[];
+    const fps = Number(el.dataset.fps) || 10;
+    if (frames.length < 2) continue;
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % frames.length;
+      el.src = frames[i];
+    }, 1000 / fps);
+  }
+</script>
