@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Nav } from "./components/layout/Nav";
 import { Footer } from "./components/layout/Footer";
-import { HomePage } from "./pages/HomePage";
-import { ProjectsPage } from "./pages/ProjectsPage";
-import { ProjectDetailPage } from "./pages/ProjectDetailPage";
-import { BlogPage } from "./pages/BlogPage";
-import { ReviewsPage } from "./pages/ReviewsPage";
-import { AboutPage } from "./pages/AboutPage";
+import { HomePage } from "./views/HomePage";
+import { ProjectsPage } from "./views/ProjectsPage";
+import { ProjectDetailPage } from "./views/ProjectDetailPage";
+import { BlogPage } from "./views/BlogPage";
+import { ReviewsPage } from "./views/ReviewsPage";
+import { AboutPage } from "./views/AboutPage";
 import type { Page } from "./types";
 
 export default function App() {
