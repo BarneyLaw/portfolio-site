@@ -1,0 +1,16 @@
+---
+name: lan-drop
+status: PLANNED
+order: 4
+tags: ["C++", "networking"]
+meta: "C++ · hole-punch"
+description: "LAN-first file drop utility with UDP hole-punching fallback for cross-NAT transfers. Basically AirDrop but for Linux and with a CLI."
+codeSnippet: "// coming soon"
+---
+
+A LAN-first file drop utility with a UDP hole-punching fallback for cross-NAT
+transfers. Basically AirDrop, but for Linux and driven from a CLI.
+
+On the local network it uses mDNS discovery and a direct TCP transfer. When
+peers are behind different NATs it falls back to UDP hole-punching coordinated
+by a tiny rendezvous server. Still just a sketch.

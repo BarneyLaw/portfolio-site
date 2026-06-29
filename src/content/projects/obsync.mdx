@@ -1,0 +1,16 @@
+---
+name: obsync
+status: PLANNED
+order: 3
+tags: ["Go", "Postgres"]
+meta: "Go · Postgres"
+description: "Self-hosted Obsidian sync server written in Go. The official sync product is fine but I'd rather own the infra. Will use Postgres for vault snapshots and conflict resolution."
+codeSnippet: "// coming soon"
+---
+
+A self-hosted Obsidian sync server written in Go. The official sync product is
+fine, but I'd rather own the infrastructure and not pay a subscription for
+something I can run on the cluster.
+
+The plan is Postgres for vault snapshots and conflict resolution, with a thin
+WebSocket layer for live updates across devices. Still in the design stage.

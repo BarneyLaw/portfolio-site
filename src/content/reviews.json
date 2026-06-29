@@ -1,0 +1,34 @@
+[
+  {
+    "id": "mikrotik-rb5009",
+    "type": "HARDWARE",
+    "verdict": "RECOMMENDED",
+    "name": "MikroTik RB5009UG+S+IN",
+    "date": "2026-06-01",
+    "excerpt": "The best sub-$200 router I've owned. RouterOS has a steep learning curve but the hardware is rock-solid and the feature set is absurd for the price."
+  },
+  {
+    "id": "tailscale",
+    "type": "SOFTWARE",
+    "verdict": "MIXED",
+    "name": "Tailscale",
+    "date": "2026-05-15",
+    "excerpt": "Great for what it is, but the free tier limits sting and I'd rather self-host Headscale. Setup was effortless though."
+  },
+  {
+    "id": "tp-link-eap670",
+    "type": "HARDWARE",
+    "verdict": "PASS",
+    "name": "TP-Link EAP670",
+    "date": "2026-04-20",
+    "excerpt": "Fine specs on paper but the Omada controller software is a mess and the hardware runs warm. Returned it after a week."
+  },
+  {
+    "id": "proxmox-ve",
+    "type": "SOFTWARE",
+    "verdict": "RECOMMENDED",
+    "name": "Proxmox VE",
+    "date": "2026-03-10",
+    "excerpt": "The virtualization platform I should have switched to years ago. Web UI is functional, clustering works, and the community is excellent."
+  }
+]
