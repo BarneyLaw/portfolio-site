@@ -1,0 +1,24 @@
+---
+title: "Running k3s on four nodes: what I learned the hard way"
+date: "2026-06-10"
+readTime: "8 min"
+category: "homelab"
+excerpt: "After two failed attempts and one corrupted etcd, I finally have a stable bare-metal k3s cluster. Here's what actually works."
+featured: true
+---
+
+After two failed attempts and one corrupted etcd, I finally have a stable
+bare-metal k3s cluster. Here's what actually worked — and the mistakes I'd skip
+if I started over.
+
+## Don't run a single server node
+
+My first cluster ran a single control-plane node with embedded etcd. It was
+fine until the NUC's SSD hiccuped during an upgrade and took etcd with it.
+Three control-plane nodes with embedded etcd is the minimum I'd run now.
+
+## Provision everything with Ansible
+
+The thing that finally made the cluster boring (in a good way) was scripting
+the entire node setup in Ansible. Rebuilding a dead node went from an afternoon
+of remembering `sysctl` flags to a ten-minute playbook run.

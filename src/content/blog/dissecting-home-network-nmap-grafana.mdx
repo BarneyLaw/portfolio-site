@@ -1,0 +1,16 @@
+---
+title: "Dissecting my home network with nmap and Grafana"
+date: "2026-05-28"
+readTime: "5 min"
+category: "networking"
+excerpt: "A weekend project that turned into a permanent dashboard."
+featured: false
+---
+
+A weekend project that turned into a permanent dashboard. I wanted to know what
+was actually talking on my network, so I wired up periodic `nmap` sweeps into
+Prometheus and built a Grafana board on top.
+
+A cron job runs `nmap -sn` across the subnet, a small script converts the
+output to Prometheus metrics, and Grafana renders a live host inventory. It has
+already caught two devices I'd completely forgotten were plugged in.

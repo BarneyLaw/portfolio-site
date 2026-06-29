@@ -1,0 +1,17 @@
+---
+title: "Writing a TCP connection pool in Go from scratch"
+date: "2026-04-30"
+readTime: "6 min"
+category: "go"
+excerpt: "Because I wanted to understand what database/sql is actually doing under the hood."
+featured: false
+---
+
+Because I wanted to understand what `database/sql` is actually doing under the
+hood, I wrote a small TCP connection pool in Go from scratch.
+
+The core is a buffered channel of connections acting as a semaphore: `Get`
+pulls one (or dials a new one up to a cap), `Put` returns it, and a background
+reaper closes connections idle past a deadline. Writing it made the standard
+library's pool behaviour — and its sharp edges around context cancellation —
+much less mysterious.

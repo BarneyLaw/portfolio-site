@@ -1,0 +1,21 @@
+---
+name: k3s cluster
+status: BUILDING
+order: 2
+tags: ["k3s", "Kubernetes", "Ansible"]
+meta: "k3s · self-host"
+description: "Four-node bare-metal k3s cluster running at home on repurposed Intel NUCs. Provisioned with Ansible, serving this site and a handful of personal services behind Traefik."
+codeSnippet: |-
+  $ kubectl get nodes
+  NAME    STATUS   ROLES
+  nuc-0   Ready    control-plane
+  nuc-1   Ready    worker
+---
+
+A four-node bare-metal k3s cluster running at home on repurposed Intel NUCs.
+The whole thing is provisioned with Ansible from a clean Ubuntu install, so I
+can rebuild a node from scratch in minutes.
+
+It serves this site plus a handful of personal services behind Traefik, with
+cert-manager handling TLS. Storage is Longhorn for now, though I'm still
+deciding whether that's the right call for a cluster this small.

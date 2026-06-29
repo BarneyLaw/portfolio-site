@@ -1,0 +1,21 @@
+---
+name: relic overlay
+status: SHIPPED
+order: 1
+tags: ["Electron", "overlay", "market API"]
+meta: "Warframe · overlay"
+description: "A real-time market overlay for Warframe that pulls live relic pricing data and displays it on-screen while you play. Hooks into the Warframe.market API and a local game log watcher."
+codeSnippet: |-
+  $ npm run dev
+  ▸ overlay listening on :9990
+  ▸ log watcher active
+---
+
+A real-time market overlay for Warframe that pulls live relic pricing data and
+displays it on-screen while you play. It hooks into the Warframe.market API and
+a local game-log watcher to figure out which relics you're about to crack.
+
+The overlay runs as a transparent always-on-top Electron window. The log
+watcher tails the game's `EE.log`, parses reward screens, and cross-references
+each drop against current market orders so I can decide what to keep at a
+glance — no alt-tabbing.

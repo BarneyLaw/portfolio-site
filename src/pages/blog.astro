@@ -1,10 +1,11 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Hatch from "../components/astro/Hatch.astro";
-import { blogPosts } from "../data/blog";
+import { getBlogPosts } from "../lib/content";
 
-const featured = blogPosts[0];
-const rest = blogPosts.slice(1);
+const posts = await getBlogPosts();
+const featured = posts.find((p) => p.data.featured) ?? posts[0];
+const rest = posts.filter((p) => p.id !== featured?.id);
 ---
 
 <Layout title="blog · packetcraft">
@@ -15,47 +16,51 @@ const rest = blogPosts.slice(1);
     </p>
 
     {/* Featured */}
-    <div
-      class="bg-card border border-border rounded overflow-hidden mb-8 hover:border-primary/50 transition-colors cursor-pointer group"
-    >
-      <Hatch class="h-32 w-full" label="featured cover" />
-      <div class="p-5">
-        <div class="flex gap-2 items-center mb-3">
-          <span
-            class="text-[9px] font-mono text-primary border border-primary rounded px-1.5 py-0.5"
-          >
-            FEATURED
-          </span>
-          <span class="text-[9px] font-mono text-muted-foreground">
-            {featured.date} · {featured.readTime} · {featured.category}
-          </span>
-        </div>
-        <div
-          class="font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors leading-snug mb-2"
+    {
+      featured && (
+        <a
+          href={`/blog/${featured.id}`}
+          class="block bg-card border border-border rounded overflow-hidden mb-8 hover:border-primary/50 transition-colors cursor-pointer group"
         >
-          {featured.title}
-        </div>
-        <div class="text-[12px] font-mono text-muted-foreground leading-relaxed">
-          {featured.excerpt}
-        </div>
-      </div>
-    </div>
+          <Hatch class="h-32 w-full" label="featured cover" />
+          <div class="p-5">
+            <div class="flex gap-2 items-center mb-3">
+              <span class="text-[9px] font-mono text-primary border border-primary rounded px-1.5 py-0.5">
+                FEATURED
+              </span>
+              <span class="text-[9px] font-mono text-muted-foreground">
+                {featured.data.date} · {featured.data.readTime} · {featured.data.category}
+              </span>
+            </div>
+            <div class="font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors leading-snug mb-2">
+              {featured.data.title}
+            </div>
+            <div class="text-[12px] font-mono text-muted-foreground leading-relaxed">
+              {featured.data.excerpt}
+            </div>
+          </div>
+        </a>
+      )
+    }
 
     {/* List */}
     <div class="flex flex-col divide-y divide-border">
       {
         rest.map((post) => (
-          <div class="py-5 hover:bg-primary/5 -mx-2 px-2 rounded transition-colors cursor-pointer group">
+          <a
+            href={`/blog/${post.id}`}
+            class="block py-5 hover:bg-primary/5 -mx-2 px-2 rounded transition-colors cursor-pointer group"
+          >
             <div class="text-[9px] font-mono text-muted-foreground mb-2">
-              {post.date} · {post.readTime} · {post.category}
+              {post.data.date} · {post.data.readTime} · {post.data.category}
             </div>
             <div class="font-bold font-mono text-[13px] text-foreground group-hover:text-primary transition-colors mb-1.5">
-              {post.title}
+              {post.data.title}
             </div>
             <div class="text-[11px] font-mono text-muted-foreground leading-relaxed">
-              {post.excerpt}
+              {post.data.excerpt}
             </div>
-          </div>
+          </a>
         ))
       }
     </div>
