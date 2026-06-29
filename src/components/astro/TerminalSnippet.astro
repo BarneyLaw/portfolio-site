@@ -1,0 +1,17 @@
+---
+interface Props {
+  code: string;
+}
+const { code } = Astro.props;
+const lines = code.split("\n");
+---
+
+<div class="bg-[#12151f] rounded-md p-3 font-mono text-[9px] leading-relaxed">
+  {
+    lines.map((line, i) => (
+      <div class={i === 0 ? "text-[#8a93a6]" : "text-[#3b82f6]"}>
+        {line || " "}
+      </div>
+    ))
+  }
+</div>
