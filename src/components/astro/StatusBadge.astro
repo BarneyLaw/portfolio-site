@@ -1,0 +1,20 @@
+---
+interface Props {
+  status: string;
+}
+const { status } = Astro.props;
+const map: Record<string, string> = {
+  SHIPPED: "text-[#1b7f4b] bg-[#e3f3e9]",
+  BUILDING: "text-[#9a6b1b] bg-[#f7eedd]",
+  PLANNED: "text-[#5a5a6a] bg-[#ececf2]",
+};
+---
+
+<span
+  class:list={[
+    "text-[8px] font-bold font-mono px-1.5 py-0.5 rounded",
+    map[status] ?? map.PLANNED,
+  ]}
+>
+  {status}
+</span>

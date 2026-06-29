@@ -1,8 +1,97 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { ReviewsPage } from "../views/ReviewsPage";
+import VerdictBadge from "../components/astro/VerdictBadge.astro";
+import Tag from "../components/astro/Tag.astro";
+import Hatch from "../components/astro/Hatch.astro";
+import { reviews } from "../data/reviews";
+
+const filters = [
+  { label: "all", id: "all" },
+  { label: "hardware", id: "HARDWARE" },
+  { label: "software", id: "SOFTWARE" },
+];
+
+const BTN_BASE =
+  "text-[10px] font-mono px-3 py-1.5 rounded cursor-pointer transition-colors";
+const BTN_ACTIVE = "bg-primary text-white";
+const BTN_INACTIVE =
+  "border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground";
 ---
 
 <Layout title="reviews · packetcraft">
-  <ReviewsPage client:load />
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <h1 class="font-bold font-mono text-3xl text-foreground mb-3">reviews</h1>
+    <p class="text-[12px] font-mono text-muted-foreground mb-5">
+      verdicts only — no stars, no affiliate links
+    </p>
+
+    <div class="flex gap-2 mb-8" id="review-filters">
+      {
+        filters.map((f) => (
+          <button
+            data-filter={f.id}
+            class:list={[BTN_BASE, f.id === "all" ? BTN_ACTIVE : BTN_INACTIVE]}
+          >
+            {f.label}
+          </button>
+        ))
+      }
+    </div>
+
+    <div class="flex flex-col gap-3" id="review-list">
+      {
+        reviews.map((r) => (
+          <div
+            data-type={r.type}
+            class="bg-card border border-border rounded p-4 flex gap-4 hover:border-primary/50 transition-colors cursor-pointer"
+          >
+            <Hatch class="w-16 h-16 flex-none" label="product" />
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-3 mb-2.5">
+                <div class="flex items-center gap-2">
+                  <Tag muted>{r.type}</Tag>
+                  <span class="font-bold font-mono text-[13px] text-foreground">
+                    {r.name}
+                  </span>
+                </div>
+                <VerdictBadge verdict={r.verdict} />
+              </div>
+              <div class="text-[11px] font-mono text-muted-foreground leading-relaxed">
+                {r.excerpt}
+              </div>
+              <div class="mt-2 text-[9px] font-mono text-muted-foreground">{r.date}</div>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </main>
+
+  <script>
+    const BTN_BASE =
+      "text-[10px] font-mono px-3 py-1.5 rounded cursor-pointer transition-colors";
+    const BTN_ACTIVE = "bg-primary text-white";
+    const BTN_INACTIVE =
+      "border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground";
+
+    const btns = Array.from(
+      document.querySelectorAll<HTMLElement>("#review-filters [data-filter]"),
+    );
+    const rows = Array.from(
+      document.querySelectorAll<HTMLElement>("#review-list [data-type]"),
+    );
+
+    for (const btn of btns) {
+      btn.addEventListener("click", () => {
+        const f = btn.dataset.filter;
+        for (const b of btns) {
+          b.className = `${BTN_BASE} ${b === btn ? BTN_ACTIVE : BTN_INACTIVE}`;
+        }
+        for (const row of rows) {
+          const show = f === "all" || row.dataset.type === f;
+          row.classList.toggle("hidden", !show);
+        }
+      });
+    }
+  </script>
 </Layout>

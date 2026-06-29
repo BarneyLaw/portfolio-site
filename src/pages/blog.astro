@@ -1,8 +1,81 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { BlogPage } from "../views/BlogPage";
+import Hatch from "../components/astro/Hatch.astro";
+import { blogPosts } from "../data/blog";
+
+const featured = blogPosts[0];
+const rest = blogPosts.slice(1);
 ---
 
 <Layout title="blog · packetcraft">
-  <BlogPage client:load />
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <h1 class="font-bold font-mono text-3xl text-foreground mb-3">blog</h1>
+    <p class="text-[12px] font-mono text-muted-foreground mb-8">
+      homelab notes · networking deep-dives · gaming-adjacent things
+    </p>
+
+    {/* Featured */}
+    <div
+      class="bg-card border border-border rounded overflow-hidden mb-8 hover:border-primary/50 transition-colors cursor-pointer group"
+    >
+      <Hatch class="h-32 w-full" label="featured cover" />
+      <div class="p-5">
+        <div class="flex gap-2 items-center mb-3">
+          <span
+            class="text-[9px] font-mono text-primary border border-primary rounded px-1.5 py-0.5"
+          >
+            FEATURED
+          </span>
+          <span class="text-[9px] font-mono text-muted-foreground">
+            {featured.date} · {featured.readTime} · {featured.category}
+          </span>
+        </div>
+        <div
+          class="font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors leading-snug mb-2"
+        >
+          {featured.title}
+        </div>
+        <div class="text-[12px] font-mono text-muted-foreground leading-relaxed">
+          {featured.excerpt}
+        </div>
+      </div>
+    </div>
+
+    {/* List */}
+    <div class="flex flex-col divide-y divide-border">
+      {
+        rest.map((post) => (
+          <div class="py-5 hover:bg-primary/5 -mx-2 px-2 rounded transition-colors cursor-pointer group">
+            <div class="text-[9px] font-mono text-muted-foreground mb-2">
+              {post.date} · {post.readTime} · {post.category}
+            </div>
+            <div class="font-bold font-mono text-[13px] text-foreground group-hover:text-primary transition-colors mb-1.5">
+              {post.title}
+            </div>
+            <div class="text-[11px] font-mono text-muted-foreground leading-relaxed">
+              {post.excerpt}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    {/* Pagination */}
+    <div class="flex justify-center gap-2 mt-8">
+      {
+        [1, 2, 3].map((n) => (
+          <button
+            class:list={[
+              "w-8 h-8 text-[10px] font-mono rounded cursor-pointer transition-colors",
+              n === 1
+                ? "bg-primary text-white"
+                : "border border-border text-muted-foreground hover:border-primary/40",
+            ]}
+          >
+            {n}
+          </button>
+        ))
+      }
+    </div>
+  </main>
 </Layout>
