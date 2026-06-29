@@ -2,7 +2,9 @@
 import Layout from "../../layouts/Layout.astro";
 import StatusBadge from "../../components/astro/StatusBadge.astro";
 import Hatch from "../../components/astro/Hatch.astro";
-import { projects } from "../../data/projects";
+import { getProjects } from "../../lib/content";
+
+const projects = (await getProjects()).map((p) => ({ id: p.id, ...p.data }));
 
 const filters = [
   { label: "all", id: "all" },

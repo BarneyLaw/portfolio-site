@@ -3,7 +3,9 @@ import Layout from "../layouts/Layout.astro";
 import VerdictBadge from "../components/astro/VerdictBadge.astro";
 import Tag from "../components/astro/Tag.astro";
 import Hatch from "../components/astro/Hatch.astro";
-import { reviews } from "../data/reviews";
+import { getReviews } from "../lib/content";
+
+const reviews = (await getReviews()).map((r) => r.data);
 
 const filters = [
   { label: "all", id: "all" },

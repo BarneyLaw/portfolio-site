@@ -1,18 +1,25 @@
 ---
+import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import StatusBadge from "../../components/astro/StatusBadge.astro";
 import Tag from "../../components/astro/Tag.astro";
 import TerminalSnippet from "../../components/astro/TerminalSnippet.astro";
-import { projects } from "../../data/projects";
+import { getProjects } from "../../lib/content";
 
-export function getStaticPaths() {
-  return projects.map((p) => ({ params: { id: p.id }, props: { project: p } }));
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project) => ({
+    params: { id: project.id },
+    props: { project },
+  }));
 }
 
-const { project: p } = Astro.props;
+const { project } = Astro.props;
+const p = project.data;
+const { Content } = await render(project);
 ---
 
-<Layout title={`${p.name} · packetcraft`}>
+<Layout title={`${p.name} · packetcraft`} description={p.description}>
   <main class="max-w-5xl mx-auto px-6 py-12">
     <a
       href="/projects"
@@ -30,7 +37,7 @@ const { project: p } = Astro.props;
       {p.tags.map((t) => <Tag>{t}</Tag>)}
     </div>
 
-    {/* Demo embed */}
+    {/* Demo embed — gap: live demo/status via Go backend (src/lib/api.ts) */}
     <div
       class="h-48 border-2 border-dashed border-primary rounded-md flex flex-col items-center justify-center gap-3 mb-8 bg-primary/5"
     >
@@ -49,9 +56,9 @@ const { project: p } = Astro.props;
 
     <div class="grid grid-cols-[1.7fr_1fr] gap-6">
       <div>
-        <p class="text-[13px] font-mono text-foreground/80 leading-[1.8]">
-          {p.description}
-        </p>
+        <article class="mdx-content">
+          <Content />
+        </article>
         <div class="mt-5">
           <TerminalSnippet code={p.codeSnippet} />
         </div>
