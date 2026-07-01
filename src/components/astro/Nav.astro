@@ -20,8 +20,8 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
         &gt;_
       </div>
       <div class="flex flex-col leading-[1.05]">
-        <span class="font-bold font-mono text-foreground text-[13px]">packetcraft</span>
-        <span class="font-mono text-muted-foreground text-[9px]">.dev</span>
+        <span class="font-bold font-mono text-foreground text-[25px]">packetcraft</span>
+        <span class="font-mono text-muted-foreground text-[13px]">.dev</span>
       </div>
     </a>
     <div class="flex items-center gap-5">
@@ -30,7 +30,7 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
           <a
             href={l.href}
             class:list={[
-              "text-[13px] font-mono transition-colors",
+              "text-[15px] font-mono transition-colors",
               isActive(l.href)
                 ? "text-primary border-b-2 border-primary pb-0.5"
                 : "text-muted-foreground hover:text-foreground",
