@@ -1,4 +1,6 @@
 ---
+import PacketSprite from "./PacketSprite.astro";
+
 const path = Astro.url.pathname;
 const links = [
   { label: "Projects", href: "/projects" },
@@ -12,18 +14,31 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
 <header
   class="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm"
 >
-  <nav class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-    <a href="/" class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-      <div
-        class="w-7 h-7 rounded-md text-[11px] bg-primary flex items-center justify-center font-bold font-mono text-white flex-shrink-0"
-      >
-        &gt;_
-      </div>
-      <div class="flex flex-col leading-[1.05]">
-        <span class="font-bold font-mono text-foreground text-[25px]">packetcraft</span>
-        <span class="font-mono text-muted-foreground text-[13px]">.dev</span>
-      </div>
+  <nav class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+    <a
+      href="/"
+      class="flex items-center hover:opacity-80 transition-opacity"
+      aria-label="packetcraft.dev — home"
+    >
+      <span class="pc-pixdepth pc-face-blue">PACKE</span><span
+        class="pc-pixdepth pc-face-blue -ml-1">T</span><span
+        class="pc-pixdepth pc-face-light">CRAFT</span>
     </a>
+
+    {/* Runway: the empty stretch between logo and nav links the mascot patrols. */}
+    <div class="pc-runway relative flex-1 self-stretch hidden md:block">
+      <button
+        id="packet-toggle"
+        type="button"
+        class="pc-packet"
+        aria-label="Pause the packet mascot"
+        aria-pressed="false"
+        title="Click to pause/resume the mascot"
+      >
+        <PacketSprite />
+      </button>
+    </div>
+
     <div class="flex items-center gap-5">
       {
         links.map((l) => (
@@ -52,3 +67,90 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
     </div>
   </nav>
 </header>
+
+<style>
+  .pc-pixdepth {
+    font-family: "Press Start 2P", monospace;
+    font-size: 22px;
+    line-height: 1;
+    letter-spacing: 0;
+    text-shadow:
+      1px 1px 0 #1e3a8a,
+      2px 2px 0 #1e3a8a,
+      3px 3px 0 #1e3a8a,
+      4px 4px 0 #16255c,
+      5px 5px 0 #16255c,
+      6px 6px 0 #16255c;
+  }
+  @media (max-width: 640px) {
+    .pc-pixdepth {
+      font-size: 14px;
+    }
+  }
+  .pc-face-blue {
+    color: #3b74f0;
+  }
+  .pc-face-light {
+    color: #f4f6fb;
+  }
+
+  /* Patrol flight: hop right until just before the first nav link, then hop
+     back — `alternate` gives the return leg, steps() keeps it frame-by-frame
+     like an old marquee. The 48px clearance = 42px sprite + 6px margin;
+     top offset is half the 33px sprite height. */
+  .pc-packet {
+    position: absolute;
+    top: calc(50% - 17px);
+    left: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    animation: pc-fly 4.5s steps(26, jump-none) infinite alternate;
+  }
+  .pc-packet.is-paused {
+    animation-play-state: paused;
+  }
+  @keyframes pc-fly {
+    from {
+      left: 6px;
+    }
+    to {
+      left: max(6px, calc(100% - 48px));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pc-packet {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  // Click the mascot to park it; the choice sticks across pages via
+  // localStorage (same pattern as the theme toggle).
+  const KEY = "packet-paused";
+  const packet = document.getElementById("packet-toggle");
+  if (packet) {
+    const apply = (paused: boolean) => {
+      packet.classList.toggle("is-paused", paused);
+      packet.setAttribute("aria-pressed", String(paused));
+      packet.setAttribute(
+        "aria-label",
+        paused ? "Resume the packet mascot" : "Pause the packet mascot",
+      );
+    };
+    let paused = false;
+    try {
+      paused = localStorage.getItem(KEY) === "1";
+    } catch {}
+    apply(paused);
+    packet.addEventListener("click", () => {
+      paused = !paused;
+      apply(paused);
+      try {
+        localStorage.setItem(KEY, paused ? "1" : "0");
+      } catch {}
+    });
+  }
+</script>

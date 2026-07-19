@@ -1,0 +1,76 @@
+---
+// Pixel-art packet mascot. The pixel map is compiled to a single box-shadow
+// string at build time, so the drawing ships as one div and zero JS. Each
+// character in MAP is a key into COLORS; "." is transparent.
+interface Props {
+  /** Size of one pixel in CSS px. */
+  px?: number;
+  class?: string;
+}
+const { px = 3, class: className } = Astro.props;
+
+const MAP = [
+  "..OOOOOOOOOO..",
+  ".OOOBBBBBBOOO.",
+  "OBBOOBBBBOOBBO",
+  "OBBBBOBBOBBBBO",
+  "OBBBBBOOBBBBBO",
+  "OBWWWBBBBWWWBO",
+  "OBWPSBBBBWPSBO",
+  "OBWWWBBBBWWWBO",
+  "OBKBBBOOBBBKBO",
+  ".OBBBBBBBBBBO.",
+  "..OOOOOOOOOO..",
+];
+const COLORS: Record<string, string> = {
+  O: "#0d1220", // outline
+  B: "#2563eb", // body blue
+  L: "#7ab0ff", // envelope-flap highlight
+  W: "#ffffff", // eye white
+  P: "#0d1220", // pupil
+  S: "#9fc1ff", // eye shine
+  K: "#ff9db0", // blush
+};
+// The 0.5px spread makes neighboring pixels overlap slightly; without it,
+// fractional display scaling (e.g. Windows at 125%) leaves anti-aliasing
+// seams between the shadow squares that read as dark grid lines.
+const shadow = MAP.flatMap((row, y) =>
+  [...row].flatMap((ch, x) =>
+    COLORS[ch] ? [`${x * px}px ${y * px}px 0 0.5px ${COLORS[ch]}`] : [],
+  ),
+).join(",");
+const width = MAP[0].length * px;
+const height = MAP.length * px;
+---
+
+<div class={className} style={`width:${width}px;height:${height}px`} aria-hidden="true">
+  <div
+    class="packet-px"
+    style={`width:${px}px;height:${px}px;box-shadow:${shadow};--bob:-${px}px`}
+  >
+  </div>
+</div>
+
+<style>
+  /* 2-frame vertical bob, stepped so it snaps between frames. */
+  .packet-px {
+    animation: packet-bob 0.4s steps(2, jump-none) infinite;
+  }
+  /* Freeze the bob too when an ancestor (the nav's pause button) is paused. */
+  :global(.is-paused) .packet-px {
+    animation-play-state: paused;
+  }
+  @keyframes packet-bob {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(var(--bob));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .packet-px {
+      animation: none;
+    }
+  }
+</style>
