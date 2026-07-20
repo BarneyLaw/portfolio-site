@@ -49,7 +49,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          
+
       - name: Compute short SHA
         id: sha
         run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
@@ -67,7 +67,7 @@ jobs:
           sudo mv kustomize /usr/local/bin/
  
       - name: Bump image tag
-        working-directory: config/apps/portfolio
+        working-directory: config/apps/portfolio/frontend
         run: |
           IMAGE=ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/portfolio-site
           kustomize edit set image ${IMAGE}=${IMAGE}:${{ steps.sha.outputs.sha }}
@@ -77,7 +77,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add apps/portfolio/kustomization.yaml
+          git add apps/portfolio/frontend/kustomization.yaml
           git commit -m "deploy: portfolio ${{ steps.sha.outputs.sha }}" || echo "no changes"
           git push
 
