@@ -49,3 +49,35 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+          
+      - name: Compute short SHA
+        id: sha
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+ 
+      - name: Checkout config repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homelab-cicd-config
+          token: ${{ secrets.CONFIG_REPO_TOKEN }}
+          path: config
+ 
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+ 
+      - name: Bump image tag
+        working-directory: config/apps/portfolio
+        run: |
+          IMAGE=ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/portfolio-site
+          kustomize edit set image ${IMAGE}=${IMAGE}:${{ steps.sha.outputs.sha }}
+ 
+      - name: Commit and push tag bump
+        working-directory: config
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/portfolio/kustomization.yaml
+          git commit -m "deploy: portfolio ${{ steps.sha.outputs.sha }}" || echo "no changes"
+          git push
+
