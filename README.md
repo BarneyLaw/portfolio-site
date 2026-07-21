@@ -1,11 +1,10 @@
 # packetcraft.dev
 
-Personal site — blog · reviews · portfolio · project showcase — built to ship
-minimal client-side JavaScript.
+Personal site: blogs · reviews · portfolio · project showcase 
+minimal dependencies
 
 **Stack:** Astro (static) · Tailwind CSS v4 · MDX/JSON content collections.
-No framework runtime is shipped to the browser; the only client JS is a few
-small inline vanilla scripts (dark-mode toggle, sprite animation, list filters).
+No framework runtime is shipped to the browser.
 
 ## Quick start
 
