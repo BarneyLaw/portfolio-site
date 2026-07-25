@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');
+/* IBM Plex Mono over Space Mono: near-identical technical-mono texture, but
+   its punctuation (the comma especially) stays legible at small sizes. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Press+Start+2P&display=swap');
 
 @keyframes blink {
   0%, 49% { opacity: 1; }

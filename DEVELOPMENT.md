@@ -92,7 +92,7 @@ portfolio-site/
 │   │   └── api.ts              # ★ Go backend seam (not wired) + PUBLIC_API_BASE_URL
 │   ├── styles/
 │   │   ├── index.css           # Entry: imports the four below
-│   │   ├── fonts.css           # Space Mono @import + @keyframes blink / scan
+│   │   ├── fonts.css           # IBM Plex Mono @import + @keyframes blink / scan
 │   │   ├── tailwind.css        # Tailwind import + @source content globs  ⚠ see gotcha
 │   │   ├── theme.css           # CSS variables (light + .dark), Tailwind @theme mapping
 │   │   ├── content.css          # .mdx-content styles for rendered MDX bodies
@@ -245,7 +245,9 @@ The review body (rendered on the detail page).
   brand color there and it propagates everywhere.
 - **Dark mode** is a `.dark` class on `<html>` (see Layout). The custom variant
   `@custom-variant dark (&:is(.dark *))` in `theme.css` powers `dark:` utilities.
-- **Fonts / keyframes** in `src/styles/fonts.css` (Space Mono + `blink`/`scan`).
+- **Fonts / keyframes** in `src/styles/fonts.css` (IBM Plex Mono + `blink`/`scan`).
+  The body family is set inline in `Layout.astro`; the nav wordmark keeps
+  Press Start 2P.
 - **MDX body styling** in `src/styles/content.css` (`.mdx-content`) — deliberately
   hand-rolled to avoid pulling in `@tailwindcss/typography`.
 
