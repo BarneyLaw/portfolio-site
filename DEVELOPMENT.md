@@ -74,14 +74,17 @@ portfolio-site/
 │   │   └── Layout.astro       # HTML shell: <head>, Nav, <slot/>, Footer, dark-mode scripts
 │   ├── components/astro/      # Presentational .astro components (no client JS unless noted)
 │   │   ├── Nav.astro          #   Sticky header: logo, nav links (active by URL), theme toggle button
-│   │   ├── Footer.astro       #   Footer: links, "slot" placeholder, uptime line (hardcoded)
+│   │   ├── Footer.astro       #   Footer: links, uptime line (hardcoded), Ruri pixel sprite
 │   │   ├── Cursor.astro        #   Blinking terminal cursor
 │   │   ├── Hatch.astro        #   Hatched placeholder box (stands in for images)
 │   │   ├── Tag.astro          #   Small pill/tag (accepts a slot)
 │   │   ├── StatusBadge.astro  #   Project status pill (SHIPPED/BUILDING/PLANNED)
 │   │   ├── VerdictBadge.astro #   Review verdict pill (RECOMMENDED/MIXED/PASS)
 │   │   ├── TerminalSnippet.astro # Renders a code string as terminal lines
+│   │   ├── PixelArt.astro     #   Draws a palette+RLE sprite as build-time SVG
 │   │   └── Sprite.astro       #   ⚠ has inline JS: cycles walk-cycle frames
+│   ├── data/                   # Generated sprite data (see scripts/pixelize.mjs)
+│   │   └── ruri-pixels.json    #   101x102 grid, 27-colour palette + RLE runs
 │   ├── content/               # CONTENT (the data)
 │   │   ├── blog/*.mdx          #   Blog posts: frontmatter + prose body
 │   │   ├── projects/*.mdx      #   Project writeups: frontmatter + prose body
@@ -99,6 +102,8 @@ portfolio-site/
 │   │   └── globals.css          # empty, unused (Figma leftover — removable)
 │   ├── img/                    # Sprite art (darjeeling.png + 25 walk frames)
 │   └── vite-env.d.ts           # vite/client types (import.meta.glob)
+├── scripts/
+│   └── pixelize.mjs            # PNG → palette+RLE sprite JSON (run by hand)
 ```
 
 `★` = the two files that matter most for future backend work.
@@ -147,6 +152,13 @@ The single HTML shell. Props: `title`, `description`. Responsibilities:
 All are pure/stateless and take props or slots. `Nav` and `Footer` are the
 shared chrome; the rest are small building blocks reused across pages. Only
 `Sprite.astro` carries client JS.
+
+`PixelArt.astro` takes a `{ w, h, pal, rle }` sprite and expands the runs into
+one `<path>` per palette colour at build time — static markup, no canvas and no
+JS. Regenerate a sprite with `node scripts/pixelize.mjs [src.png] [out.json]
+[cols]`, which nearest-neighbour downscales the art, snaps channels to
+multiples of 8, and run-length encodes the result. Keep `scale` an integer so
+sprite pixels land on device pixels.
 
 Note: these `.astro` primitives were ported from the original React components.
 They are the source of truth now; the React versions were deleted.

@@ -1,0 +1,64 @@
+---
+// Renders a palette + RLE sprite (produced by scripts/pixelize.mjs) as static
+// SVG. The runs are expanded into one <path> per colour at build time, so the
+// drawing is 27-ish elements of plain markup and ships zero JavaScript — the
+// same trade PacketSprite.astro makes with box-shadow, which only stays cheap
+// for sprites of a couple of hundred pixels.
+interface Sprite {
+  w: number;
+  h: number;
+  pal: string[];
+  rle: number[];
+}
+
+interface Props {
+  sprite: Sprite;
+  /** Whole-number device pixels per sprite pixel. Keep it an integer: that is
+      what guarantees every cell lands on the pixel grid without softening. */
+  scale?: number;
+  alt?: string;
+  class?: string;
+}
+
+const { sprite, scale = 2, alt, class: className } = Astro.props;
+
+// Walk the runs, splitting any that cross a row boundary so each piece is a
+// single horizontal line, and collect them per colour. A run of length n at
+// (x, y) becomes "Mx y+0.5 h n": a 1-unit stroke centred on the row, which is
+// the most compact way to express a row of pixels.
+const strokes = new Map<number, string[]>();
+let pos = 0;
+for (let i = 0; i < sprite.rle.length; i += 2) {
+  const color = sprite.rle[i];
+  let left = sprite.rle[i + 1];
+  while (left > 0) {
+    const x = pos % sprite.w;
+    const y = Math.floor(pos / sprite.w);
+    const len = Math.min(left, sprite.w - x);
+    if (color !== 0) {
+      const d = strokes.get(color) ?? [];
+      d.push(`M${x} ${y + 0.5}h${len}`);
+      strokes.set(color, d);
+    }
+    pos += len;
+    left -= len;
+  }
+}
+const paths = [...strokes].map(([color, d]) => ({
+  stroke: sprite.pal[color],
+  d: d.join(""),
+}));
+---
+
+<svg
+  class={className}
+  width={sprite.w * scale}
+  height={sprite.h * scale}
+  viewBox={`0 0 ${sprite.w} ${sprite.h}`}
+  shape-rendering="crispEdges"
+  role={alt ? "img" : "presentation"}
+  aria-label={alt}
+  aria-hidden={alt ? undefined : "true"}
+>
+  {paths.map((p) => <path stroke={p.stroke} stroke-width="1" d={p.d} />)}
+</svg>

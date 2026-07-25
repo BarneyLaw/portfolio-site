@@ -1,6 +1,6 @@
 ---
-import { Image } from "astro:assets";
-import RuriImage from "src/img/sprites/ruri_transparent.png";
+import PixelArt from "./PixelArt.astro";
+import ruri from "../../data/ruri-pixels.json";
 
 const siteLinks = [
   { label: "Projects", href: "/projects" },
@@ -70,12 +70,7 @@ const elsewhere = [
       <div
         class="flex items-center justify-center p-3 text-center"
       >
-        <Image 
-          src={RuriImage}
-          alt="Ruri" 
-          width={200} 
-          height={150} 
-        />
+        <PixelArt sprite={ruri} scale={2} alt="Ruri" />
       </div>
     </div>
     <div class="mt-6 pt-4 border-t border-border flex justify-between">
