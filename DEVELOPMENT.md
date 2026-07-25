@@ -84,7 +84,7 @@ portfolio-site/
 │   │   ├── PixelArt.astro     #   Draws a palette+RLE sprite as build-time SVG
 │   │   └── Sprite.astro       #   ⚠ has inline JS: cycles walk-cycle frames
 │   ├── data/                   # Generated sprite data (see scripts/pixelize.mjs)
-│   │   └── ruri-pixels.json    #   101x102 grid, 27-colour palette + RLE runs
+│   │   └── ruri-pixels.json    #   170x172 grid, 27-colour palette + RLE runs
 │   ├── content/               # CONTENT (the data)
 │   │   ├── blog/*.mdx          #   Blog posts: frontmatter + prose body
 │   │   ├── projects/*.mdx      #   Project writeups: frontmatter + prose body
