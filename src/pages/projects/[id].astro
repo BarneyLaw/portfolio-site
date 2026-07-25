@@ -54,16 +54,10 @@ const { Content } = await render(project);
       <div class="text-[13px] font-mono text-primary">demo loading…</div>
     </div>
 
-    <div class="grid grid-cols-[1.7fr_1fr] gap-6">
-      <div>
-        <article class="mdx-content">
-          <Content />
-        </article>
-        <div class="mt-5">
-          <TerminalSnippet code={p.codeSnippet} />
-        </div>
-      </div>
-      <div class="bg-card border border-border rounded p-4">
+    {/* The sidebar floats rather than taking a grid column, so it ends with its
+        own content and the writeup reflows into the full width underneath it. */}
+    <div>
+      <aside class="float-right w-80 ml-6 mb-4 bg-card border border-border rounded p-4">
         <div class="text-[12px] font-mono text-muted-foreground mb-3">links</div>
         <div class="flex flex-col gap-2">
           {
@@ -83,6 +77,14 @@ const { Content } = await render(project);
             stack: <span class="text-foreground">{p.tags.join(", ")}</span>
           </div>
         </div>
+      </aside>
+
+      <article class="mdx-content">
+        <Content />
+      </article>
+
+      <div class="mt-5 clear-both">
+        <TerminalSnippet code={p.codeSnippet} />
       </div>
     </div>
   </main>
