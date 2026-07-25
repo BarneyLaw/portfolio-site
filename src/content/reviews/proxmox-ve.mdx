@@ -1,0 +1,25 @@
+---
+name: "Proxmox VE"
+type: SOFTWARE
+verdict: RECOMMENDED
+date: "2026-03-10"
+excerpt: "The virtualization platform I should have switched to years ago. Web UI is functional, clustering works, and the community is excellent."
+---
+
+The virtualization platform I should have switched to years ago, after too long
+spent hand-rolling libvirt XML and pretending that was a system.
+
+The web UI is functional rather than beautiful, which is the correct priority
+for something you touch at 2am. Everything it does maps to a command you can run
+over SSH, so the UI never becomes the only way to accomplish a thing. Clustering
+works: three nodes, a shared ZFS pool, and live migration that has never lost a
+VM on me.
+
+LXC containers alongside full VMs turned out to be the feature I use most —
+services that don't need kernel isolation get a container and a fraction of the
+overhead. Backups to a separate Proxmox Backup Server have restored cleanly
+every time I've tested them, which is more than I can say for the arrangement it
+replaced.
+
+The community is the other half of the recommendation. Nearly every problem I've
+hit had a forum thread with an answer from someone who'd hit it first.

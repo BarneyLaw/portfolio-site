@@ -1,10 +1,9 @@
 import { defineCollection, z } from "astro:content";
-import { glob, file } from "astro/loaders";
+import { glob } from "astro/loaders";
 
-// Blog posts and project writeups are prose → MDX files with frontmatter.
-// Reviews are structured records with no long body → a single JSON data file
-// (the most database-like collection; see src/lib/content.ts for the seam
-// where this can later be swapped for a Go/Postgres-backed query).
+// Every collection is prose → one MDX file per entry, frontmatter for the
+// structured fields and the body for the writeup. See src/lib/content.ts for
+// the seam where these can later be swapped for a Go/Postgres-backed query.
 
 const blog = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/blog" }),
@@ -32,9 +31,8 @@ const projects = defineCollection({
 });
 
 const reviews = defineCollection({
-  loader: file("./src/content/reviews.json"),
+  loader: glob({ pattern: "**/*.mdx", base: "./src/content/reviews" }),
   schema: z.object({
-    id: z.string(),
     type: z.enum(["HARDWARE", "SOFTWARE"]),
     verdict: z.enum(["RECOMMENDED", "MIXED", "PASS"]),
     name: z.string(),

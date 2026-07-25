@@ -1,0 +1,26 @@
+---
+name: "MikroTik RB5009UG+S+IN"
+type: HARDWARE
+verdict: RECOMMENDED
+date: "2026-06-01"
+excerpt: "The best sub-$200 router I've owned. RouterOS has a steep learning curve but the hardware is rock-solid and the feature set is absurd for the price."
+---
+
+The best sub-$200 router I've owned. It replaced a consumer box that fell over
+any time the cluster pulled container images at full tilt, and in four months of
+uptime it has not needed a single reboot.
+
+The hardware is the easy part to praise: a quad-core ARM64 chip that does line
+rate on the 2.5G port, a 10G SFP+ cage, and passive cooling that stays quiet
+because there is no fan to be quiet with. Routing between VLANs no longer shows
+up as a bottleneck in any graph I keep.
+
+RouterOS is where the learning curve lives. The firewall is stateful and
+explicit, which means an empty ruleset routes nothing and a half-finished one
+routes everything — you configure it properly or not at all. Expect to lock
+yourself out at least once. Once past that, the feature set is genuinely absurd
+for the price: policy routing, BGP, WireGuard, VRRP, and per-queue traffic
+shaping are all in the base licence.
+
+Buy it if you want to learn networking properly. Skip it if you want a web UI
+that hides the details from you.

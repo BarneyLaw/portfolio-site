@@ -2,7 +2,7 @@ import { getCollection, type CollectionEntry } from "astro:content";
 
 // ── Content access layer ─────────────────────────────────────────────────
 // Single seam between pages and the content source. Today everything comes
-// from local content collections (MDX + JSON). When a Go backend + database
+// from local MDX content collections. When a Go backend + database
 // land, swap the *bodies* of these functions to fetch from the API (see
 // src/lib/api.ts) — page components, schemas, and call sites stay unchanged.
 //
@@ -36,4 +36,9 @@ export async function getBlogPost(id: string): Promise<BlogEntry | undefined> {
 export async function getReviews(): Promise<ReviewEntry[]> {
   const entries = await getCollection("reviews");
   return entries.sort((a, b) => b.data.date.localeCompare(a.data.date));
+}
+
+export async function getReview(id: string): Promise<ReviewEntry | undefined> {
+  const entries = await getCollection("reviews");
+  return entries.find((r) => r.id === id);
 }

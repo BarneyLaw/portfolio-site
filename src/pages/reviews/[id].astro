@@ -1,0 +1,56 @@
+---
+import { render } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import VerdictBadge from "../../components/astro/VerdictBadge.astro";
+import { getReviews } from "../../lib/content";
+
+export async function getStaticPaths() {
+  const reviews = await getReviews();
+  return reviews.map((review) => ({
+    params: { id: review.id },
+    props: { review },
+  }));
+}
+
+const { review } = Astro.props;
+const r = review.data;
+const { Content } = await render(review);
+---
+
+<Layout title={`${r.name} · packetcraft`} description={r.excerpt}>
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <a
+      href="/reviews"
+      class="inline-block text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors mb-5 cursor-pointer"
+    >
+      ← reviews / {r.name}
+    </a>
+
+    <div class="text-[9px] font-mono text-muted-foreground mb-2">
+      {r.date} · {r.type.toLowerCase()}
+    </div>
+    <div class="flex items-center gap-3 mb-6">
+      <h1 class="font-bold font-mono text-2xl text-foreground">{r.name}</h1>
+      <VerdictBadge verdict={r.verdict} />
+    </div>
+
+    <div class="grid grid-cols-[1.7fr_1fr] gap-6">
+      <article class="mdx-content">
+        <Content />
+      </article>
+      <div class="bg-card border border-border rounded p-4 h-fit">
+        <div class="text-[9px] font-mono text-muted-foreground mb-3">verdict</div>
+        <VerdictBadge verdict={r.verdict} />
+        <div class="mt-5 text-[9px] font-mono text-muted-foreground mb-3">meta</div>
+        <div class="flex flex-col gap-1.5">
+          <div class="text-[10px] font-mono text-foreground/70">
+            type: <span class="text-foreground">{r.type}</span>
+          </div>
+          <div class="text-[10px] font-mono text-foreground/70">
+            reviewed: <span class="text-foreground">{r.date}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>

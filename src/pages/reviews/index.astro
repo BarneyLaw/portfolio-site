@@ -1,11 +1,11 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import VerdictBadge from "../components/astro/VerdictBadge.astro";
-import Tag from "../components/astro/Tag.astro";
-import Hatch from "../components/astro/Hatch.astro";
-import { getReviews } from "../lib/content";
+import Layout from "../../layouts/Layout.astro";
+import VerdictBadge from "../../components/astro/VerdictBadge.astro";
+import Tag from "../../components/astro/Tag.astro";
+import Hatch from "../../components/astro/Hatch.astro";
+import { getReviews } from "../../lib/content";
 
-const reviews = (await getReviews()).map((r) => r.data);
+const reviews = await getReviews();
 
 const filters = [
   { label: "all", id: "all" },
@@ -42,28 +42,31 @@ const BTN_INACTIVE =
 
     <div class="flex flex-col gap-3" id="review-list">
       {
-        reviews.map((r) => (
-          <div
-            data-type={r.type}
-            class="bg-card border border-border rounded p-4 flex gap-4 hover:border-primary/50 transition-colors cursor-pointer"
+        reviews.map((review) => (
+          <a
+            href={`/reviews/${review.id}`}
+            data-type={review.data.type}
+            class="bg-card border border-border rounded p-4 flex gap-4 hover:border-primary/50 transition-colors cursor-pointer group"
           >
             <Hatch class="w-16 h-16 flex-none" label="product" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-3 mb-2.5">
                 <div class="flex items-center gap-2">
-                  <Tag muted>{r.type}</Tag>
-                  <span class="font-bold font-mono text-[13px] text-foreground">
-                    {r.name}
+                  <Tag muted>{review.data.type}</Tag>
+                  <span class="font-bold font-mono text-[13px] text-foreground group-hover:text-primary transition-colors">
+                    {review.data.name}
                   </span>
                 </div>
-                <VerdictBadge verdict={r.verdict} />
+                <VerdictBadge verdict={review.data.verdict} />
               </div>
               <div class="text-[11px] font-mono text-muted-foreground leading-relaxed">
-                {r.excerpt}
+                {review.data.excerpt}
               </div>
-              <div class="mt-2 text-[9px] font-mono text-muted-foreground">{r.date}</div>
+              <div class="mt-2 text-[9px] font-mono text-muted-foreground">
+                {review.data.date}
+              </div>
             </div>
-          </div>
+          </a>
         ))
       }
     </div>

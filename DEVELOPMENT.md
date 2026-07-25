@@ -5,7 +5,7 @@ A personal site (blog · reviews · portfolio · project showcase) built to ship
 
 - **Framework:** [Astro](https://astro.build) 7 (static output)
 - **Styling:** Tailwind CSS v4 (via `@tailwindcss/vite`) + CSS custom properties
-- **Content:** Astro content collections — MDX for prose, JSON for structured data
+- **Content:** Astro content collections — one MDX file per entry (frontmatter + prose)
 - **Client JS:** none from a framework. The only JS is a few hundred bytes of
   hand-written vanilla script, inlined per page (dark-mode toggle, sprite
   animation, list filters).
@@ -44,7 +44,7 @@ the page HTML:
 |---|---|---|
 | Dark-mode toggle + no-flash init | `src/layouts/Layout.astro` | Toggles `.dark` on `<html>`, persists to `localStorage`; an inline head script applies the saved theme before first paint |
 | Walking sprite loader | `src/components/astro/Sprite.astro` | Cycles 25 PNG frames via `setInterval` |
-| Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews.astro` | Show/hide cards by toggling the `hidden` class |
+| Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling the `hidden` class |
 
 That's the complete client-side JS inventory. If you find yourself reaching for
 a framework or a heavy dependency, re-read [Guiding principles](#guiding-principles).
@@ -64,7 +64,9 @@ portfolio-site/
 │   │   ├── about.astro       #   /about       About (static)
 │   │   ├── blog.astro        #   /blog        Blog index (from collection)
 │   │   ├── blog/[slug].astro #   /blog/:slug  Blog post (renders MDX body)
-│   │   ├── reviews.astro     #   /reviews     Reviews (from collection, filterable)
+│   │   ├── reviews/
+│   │   │   ├── index.astro   #   /reviews     Reviews list (filterable)
+│   │   │   └── [id].astro    #   /reviews/:id Review detail (renders MDX body)
 │   │   └── projects/
 │   │       ├── index.astro   #   /projects    Projects grid (filterable)
 │   │       └── [id].astro    #   /projects/:id Project detail (renders MDX body)
@@ -83,7 +85,7 @@ portfolio-site/
 │   ├── content/               # CONTENT (the data)
 │   │   ├── blog/*.mdx          #   Blog posts: frontmatter + prose body
 │   │   ├── projects/*.mdx      #   Project writeups: frontmatter + prose body
-│   │   └── reviews.json        #   Reviews: structured records (most DB-like)
+│   │   └── reviews/*.mdx       #   Reviews: frontmatter (verdict/type) + prose body
 │   ├── content.config.ts       # Collection definitions + zod schemas
 │   ├── lib/
 │   │   ├── content.ts          # ★ Content access layer — the seam to a future backend
@@ -126,8 +128,11 @@ dynamic and enumerate their pages with `getStaticPaths()`.
 - **`projects/[id].astro`** — One page per project. Renders the MDX writeup +
   the `codeSnippet` frontmatter as a `TerminalSnippet`. The "demo" box is a
   placeholder ([backend seam](#backend-seam-go--db) candidate).
-- **`reviews.astro`** — List from `getReviews()`, same filter pattern as
-  projects but keyed on `data-type` (hardware/software).
+- **`reviews/index.astro`** — List from `getReviews()`, same filter pattern as
+  projects but keyed on `data-type` (hardware/software). Cards link to
+  `/reviews/:id`.
+- **`reviews/[id].astro`** — One page per review. Renders the MDX body next to a
+  sidebar with the verdict badge and meta (type, date).
 
 ### Layout (`src/layouts/Layout.astro`)
 The single HTML shell. Props: `title`, `description`. Responsibilities:
@@ -156,6 +161,7 @@ getProject(id)
 getBlogPosts()           // sorted by date desc
 getBlogPost(id)
 getReviews()             // sorted by date desc
+getReview(id)
 ```
 
 This indirection is the whole point: when a backend arrives, you change the
@@ -166,7 +172,7 @@ pages, schemas, and call sites stay identical.
 Three collections with zod schemas:
 - `blog` — `glob()` loader over `src/content/blog/*.mdx`
 - `projects` — `glob()` loader over `src/content/projects/*.mdx`
-- `reviews` — `file()` loader over `src/content/reviews.json`
+- `reviews` — `glob()` loader over `src/content/reviews/*.mdx`
 
 Schemas validate at build time (`npm run check` / `npm run build`). Change a
 field here and TypeScript + the build will tell you every place to update.
@@ -215,13 +221,19 @@ The writeup body (rendered on the detail page).
 ```
 
 ### Add a review
-Append an object to `src/content/reviews.json` (`id` must be unique):
+Create `src/content/reviews/thing-slug.mdx`. Filename = `/reviews/:id`.
 
-```json
-{ "id": "thing-slug", "type": "HARDWARE", "verdict": "RECOMMENDED",
-  "name": "Product name", "date": "2026-07-01", "excerpt": "One-liner." }
+```mdx
+---
+name: "Product name"
+type: HARDWARE            # HARDWARE | SOFTWARE
+verdict: RECOMMENDED      # RECOMMENDED | MIXED | PASS
+date: "2026-07-01"
+excerpt: "One-liner shown in the list."
+---
+
+The review body (rendered on the detail page).
 ```
-`type` ∈ HARDWARE|SOFTWARE, `verdict` ∈ RECOMMENDED|MIXED|PASS.
 
 ---
 
@@ -277,9 +289,10 @@ with the rest of the site. Example flow:
 func uptime(w http.ResponseWriter, r *http.Request) { w.Write([]byte(liveUptime())) }
 ```
 
-**Suggested first step:** move `reviews.json` (already the most row-like data)
-behind a Go+Postgres endpoint, and change only `getReviews()` in
-`src/lib/content.ts` to fetch it. That proves the seam end-to-end.
+**Suggested first step:** move the reviews collection (the most row-like
+frontmatter) behind a Go+Postgres endpoint, and change only `getReviews()` /
+`getReview()` in `src/lib/content.ts` to fetch it. That proves the seam
+end-to-end.
 
 ---
 
@@ -344,6 +357,9 @@ Delivered in phases, each a branch merged into `master` with granular commits:
    React components. The site became pure Astro with zero framework JS.
 6. **MDX content collections** — content moved into `src/content/` (MDX + JSON)
    behind the `src/lib/content.ts` access layer, with the Go/DB seam scaffolded.
+7. **Reviews as writeups** — reviews moved from a single `reviews.json` to one
+   MDX file each and gained detail pages at `/reviews/:id`, matching blog and
+   projects. Every collection is now MDX.
 
 ## Guiding principles
 

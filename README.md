@@ -3,7 +3,7 @@
 Personal site — blog · reviews · portfolio · project showcase — built to ship
 minimal client-side JavaScript.
 
-**Stack:** Astro (static) · Tailwind CSS v4 · MDX/JSON content collections.
+**Stack:** Astro (static) · Tailwind CSS v4 · MDX content collections.
 No framework runtime is shipped to the browser; the only client JS is a few
 small inline vanilla scripts (dark-mode toggle, sprite animation, list filters).
 
