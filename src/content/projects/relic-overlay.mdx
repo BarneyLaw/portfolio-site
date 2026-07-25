@@ -1,21 +1,147 @@
 ---
-name: relic overlay
+name: warframe-relic-overlay
 status: SHIPPED
 order: 1
-tags: ["Electron", "overlay", "market API"]
-meta: "Warframe · overlay"
-description: "A real-time market overlay for Warframe that pulls live relic pricing data and displays it on-screen while you play. Hooks into the Warframe.market API and a local game log watcher."
-codeSnippet: |-
-  $ npm run dev
-  ▸ overlay listening on :9990
-  ▸ log watcher active
+tags: ["C#", ".NET", "WPF", "OCR", "computer-vision"]
+meta: "C# · WPF · Tesseract OCR"
+description: "A real-time Windows overlay that reads Warframe's relic reward screen and shows live market prices over each card, so you can pick the most valuable drop without alt-tabbing. Resolution, UI-scale, and theme independent, all on plain CPU work."
+codeSnippet: "// coming soon"
 ---
 
-A real-time market overlay for Warframe that pulls live relic pricing data and
-displays it on-screen while you play. It hooks into the Warframe.market API and
-a local game-log watcher to figure out which relics you're about to crack.
+# Building a Warframe Relic Price Overlay: The Whole Journey
 
-The overlay runs as a transparent always-on-top Electron window. The log
-watcher tails the game's `EE.log`, parses reward screens, and cross-references
-each drop against current market orders so I can decide what to keep at a
-glance — no alt-tabbing.
+## Why I built this
+
+If you play Warframe, you know the moment. A Void Fissure cracks a relic, and
+you get a few seconds to pick one of up to four rewards. The "right" pick is
+usually just the one worth the most platinum on the market. Figuring that out
+means either memorising prices or tabbing out mid-mission, which is exactly
+when you have no time to spare.
+
+I wanted an overlay that sat on top of the game, read the reward screen, and
+showed the live market price over each card. No alt-tabbing, no guessing. Pick
+the valuable one and move on.
+
+It started as a CS portfolio piece. I have a Java OOP background and wanted
+something real to learn C# on. What I got instead was a much bigger project
+than I bargained for, and a much better teacher.
+
+## The first version, and why I threw most of it away
+
+The first build worked, sort of. It watched the Warframe process, captured a
+region of the screen every 750ms, ran OCR to check whether the reward screen
+was showing, and required four consecutive positive detections before it
+trusted the result. Then it read the reward text, fuzzy-matched each item
+against a known pool, hit the market API, and drew the prices.
+
+It technically did the job. But once I actually audited my own code, the
+problems were hard to ignore.
+
+The whole thing ran on the UI thread. Every OCR call froze the interface for as
+long as Tesseract took to run. Detection alone burned three seconds waiting for
+its streak of four hits, then it added another second of stabilisation delay on
+top. There was a single shared Tesseract engine being called from four parallel
+tasks at once, which is a straight-up race condition on an object that was never
+thread-safe. The reward pool was 600 lines of hardcoded C# with duplicate
+entries and typos baked in. And the layout math assumed one specific resolution
+and UI scale, so it broke the moment anyone ran a different setup.
+
+Worst-case, it took close to seven seconds from the reward screen appearing to
+a price showing up. In a game that gives you a few seconds to choose, that is
+useless.
+
+So I rebuilt it. New repo, layered architecture, the works.
+
+## The rebuild
+
+The guiding principle for the whole thing became one line: **fail silent over
+fail confidently wrong.** OCR is probabilistic, the game UI is a moving target,
+and the rendering environment is completely out of my control. No single stage
+can be trusted on its own, so the design assumes every stage might be wrong and
+degrades gracefully when it is. A blank card is fine. A confidently mislabelled
+price is not.
+
+Here is what changed, and why.
+
+**Detection went from three seconds to basically zero.** Warframe writes to a
+debug log the instant a reward screen appears. Instead of hammering the screen
+with OCR, I tail that log file and fire the moment the right line shows up. It
+costs almost no CPU and triggers before the card animation even starts. OCR
+polling still exists as a fallback for non-standard installs, but it is no
+longer the primary path.
+
+**Layout detection stopped guessing.** This was the hardest and most interesting
+part. The reward screen shifts with aspect ratio, in-game UI scale, and Windows
+DPI, so any hardcoded position is wrong for most people. The existing community
+tools handle this by brute-forcing dozens of UI-scale candidates and scoring
+them against hardcoded theme colour tables, which breaks under HDR, colour
+filters, or a theme update.
+
+Instead, I read the actual screenshot. Warframe's item names are a warm amber
+colour, so I build a mask keyed on hue rather than brightness, find the rows
+that contain two to four evenly-spaced text runs, and validate them by how
+consistent the spacing is. Real cards are rigidly evenly spaced. Stray warm text
+is not. That single pass gives me both the reward count and the exact card
+boundaries, with zero configuration and no colour tables to maintain.
+
+**OCR got fast and safe.** One LockBits preprocessing pass instead of a
+per-pixel loop, a single Tesseract pass per card instead of three, and a pool of
+four engines so all four cards run in true parallel without the old
+shared-engine race.
+
+**Everything else got moved off the UI thread.** A proper event-driven state
+machine (Idle, Tracking, Detecting, Pricing, Displaying) coordinates the flow.
+All OCR and network work runs on the thread pool. The UI thread is never
+blocked. Prices are cached with a TTL so re-rolling the same relic does not
+re-hit the API. The reward pool now lives in a JSON file, so new Primes are a
+text edit, not a recompile.
+
+The result is a pricing cycle that lands in the one-to-two second range instead
+of seven.
+
+## The challenges that actually taught me something
+
+**Threading was the big one.** Coming from Java, I understood the concepts, but
+WPF's dispatcher model and C#'s async/await forced me to be precise about what
+runs where. The old shared-Tesseract crash was a perfect lesson in why "it
+usually works" is not the same as "it is correct."
+
+**The layout problem had no clean answer.** There is genuinely no way to know
+the exact card position without either reading it from the screen or asking the
+user to configure their scale. I did not want to ask. Getting the warm-text
+detector to be robust across resolutions and themes, while staying under a
+millisecond, took a lot of iteration on real screenshots rather than synthetic
+test data. Visual verification beat clever assumptions every time.
+
+**Animations lie.** The card slide-in animation can briefly present a plausible
+but wrong layout. So the pipeline captures, waits for the text to settle,
+recaptures, and only proceeds when two frames agree. Small detail, but without
+it the overlay would occasionally crop a frame mid-animation and confidently
+show nonsense, which is exactly the failure mode I was trying to design out.
+
+**Knowing what not to do.** Fine-tuning Tesseract on Warframe's font was
+tempting. But fuzzy matching already absorbs most OCR error, so the honest move
+is to measure actual failure rates first and only train a custom model if the
+data justifies it. Same with pricing: lowest sell price ignores volume and
+listing age, so a single stale lowball listing can misrepresent value. I know
+it, it is documented, and it is on the list. Being clear about the limitations
+felt more valuable than pretending they were solved.
+
+## Where it stands
+
+The app is largely feature-complete and covered by around 286 tests, including
+an end-to-end run through the real pipeline. The layered architecture (Domain,
+Infrastructure, Application, Presentation) with dependency injection made the
+whole thing testable in a way the first version never was.
+
+There is more to do. An in-app settings menu, an auto-updating item pool pulled
+from the market API, and a debug visualisation of the detected card boxes are
+all on the roadmap. And the honest truth is that no version of this can ever be
+perfectly correct. Probabilistic OCR plus a moving-target UI plus an
+uncontrolled rendering environment means accuracy can be high but never certain.
+The architecture leans into that rather than fighting it.
+
+What started as a portfolio piece turned into the project that actually taught
+me C#. Threading, clean architecture, graceful degradation, and the discipline
+of measuring before optimising. Not because a course told me to, but because the
+project broke every time I skipped them.

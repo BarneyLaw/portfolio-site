@@ -2,7 +2,7 @@
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import VerdictBadge from "../../components/astro/VerdictBadge.astro";
-import { getReviews } from "../../lib/content";
+import { getReviews, getReview } from "../../lib/content";
 
 export async function getStaticPaths() {
   const reviews = await getReviews();
