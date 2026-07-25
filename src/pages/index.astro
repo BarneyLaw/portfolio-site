@@ -4,27 +4,40 @@ import Cursor from "../components/astro/Cursor.astro";
 import Hatch from "../components/astro/Hatch.astro";
 import Tag from "../components/astro/Tag.astro";
 import Sprite from "../components/astro/Sprite.astro";
+import { getProjects, getBlogPosts, getReviews } from "../lib/content";
+
+// The feed is built from the collections rather than hand-written, so every
+// card links to a page that exists and the copy can't drift from the source.
+const posts = await getBlogPosts();
+const featured = posts.find((p) => p.data.featured) ?? posts[0];
+
+const topProject = (await getProjects())[0];
+const topPost = posts.find((p) => p.id !== featured?.id);
+const topReview = (await getReviews())[0];
 
 const recent = [
-  {
+  topProject && {
     tag: "PROJECT",
-    label: "relic overlay — SHIPPED",
-    sub: "Warframe market overlay using Electron + WF.Market API",
+    href: `/projects/${topProject.id}`,
+    label: `${topProject.data.name} — ${topProject.data.status}`,
+    sub: topProject.data.meta,
     muted: false,
   },
-  {
+  topPost && {
     tag: "BLOG",
-    label: "Dissecting my home network with nmap and Grafana",
-    sub: "2026-05-28 · 5 min · networking",
+    href: `/blog/${topPost.id}`,
+    label: topPost.data.title,
+    sub: `${topPost.data.date} · ${topPost.data.readTime} · ${topPost.data.category}`,
     muted: true,
   },
-  {
+  topReview && {
     tag: "REVIEW",
-    label: "MikroTik RB5009 — RECOMMENDED",
-    sub: "The best sub-$200 router I've owned",
+    href: `/reviews/${topReview.id}`,
+    label: `${topReview.data.name} — ${topReview.data.verdict}`,
+    sub: topReview.data.excerpt,
     muted: true,
   },
-];
+].filter((item): item is NonNullable<typeof item> => Boolean(item));
 
 const navCards = ["projects", "blog", "reviews"];
 ---
@@ -77,49 +90,53 @@ const navCards = ["projects", "blog", "reviews"];
         ▸ news · hardware drops · findings
       </span>
     </div>
-    <div
-      class="bg-card border border-border border-l-[3px] border-l-primary rounded-md overflow-hidden flex gap-4 p-4 mb-8"
-    >
-      <Hatch class="w-28 h-20 flex-none" label="cover" />
-      <div class="flex-1 min-w-0">
-        <div class="flex gap-2 items-center">
-          <span
-            class="text-[12px] font-mono text-primary border border-primary rounded px-1.5 py-0.5"
-          >
-            FEATURED
-          </span>
-          <span class="text-[12px] font-mono text-muted-foreground">2026-06-22</span>
-        </div>
-        <div
-          class="mt-3 font-bold font-mono text-[16px] text-foreground leading-snug"
+    {
+      featured && (
+        <a
+          href={`/blog/${featured.id}`}
+          class="bg-card border border-border border-l-[3px] border-l-primary rounded-md overflow-hidden flex gap-4 p-4 mb-8 hover:border-primary/50 transition-colors cursor-pointer group"
         >
-          k3s cluster: one year of lessons from running prod at home
-        </div>
-        <div
-          class="mt-2 text-[14px] font-mono text-muted-foreground leading-relaxed"
-        >
-          What broke, what held, and what I'd do differently if I started over today.
-        </div>
-      </div>
-    </div>
+          <Hatch class="w-28 h-20 flex-none" label="cover" />
+          <div class="flex-1 min-w-0">
+            <div class="flex gap-2 items-center">
+              <span class="text-[12px] font-mono text-primary border border-primary rounded px-1.5 py-0.5">
+                FEATURED
+              </span>
+              <span class="text-[12px] font-mono text-muted-foreground">
+                {featured.data.date}
+              </span>
+            </div>
+            <div class="mt-3 font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors leading-snug">
+              {featured.data.title}
+            </div>
+            <div class="mt-2 text-[14px] font-mono text-muted-foreground leading-relaxed">
+              {featured.data.excerpt}
+            </div>
+          </div>
+        </a>
+      )
+    }
 
     {/* Recent */}
     <div class="text-[14px] font-mono text-muted-foreground mb-3">// recent</div>
     <div class="flex flex-col gap-3 mb-10">
       {
         recent.map((item) => (
-          <div class="bg-card border border-border rounded p-3 flex gap-3 hover:border-primary/40 transition-colors cursor-pointer">
+          <a
+            href={item.href}
+            class="bg-card border border-border rounded p-3 flex gap-3 hover:border-primary/40 transition-colors cursor-pointer group"
+          >
             <Hatch class="w-14 h-14 flex-none" />
             <div class="flex-1 min-w-0">
               <Tag muted={item.muted}>{item.tag}</Tag>
-              <div class="mt-2 font-mono text-[15px] text-foreground font-bold leading-snug">
+              <div class="mt-2 font-mono text-[15px] text-foreground group-hover:text-primary transition-colors font-bold leading-snug">
                 {item.label}
               </div>
-              <div class="mt-1 text-[13px] font-mono text-muted-foreground">
+              <div class="mt-1 text-[13px] font-mono text-muted-foreground line-clamp-1">
                 {item.sub}
               </div>
             </div>
-          </div>
+          </a>
         ))
       }
       <div class="flex items-center gap-2 pt-2 px-1">
