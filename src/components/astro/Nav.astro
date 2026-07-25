@@ -97,8 +97,10 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
   /* Patrol flight: hop right until just before the first nav link, then hop
      back — `alternate` gives the return leg, steps() keeps it frame-by-frame
      like an old marquee. The 48px clearance = 42px sprite + 6px margin;
-     top offset is half the 33px sprite height. */
+     top offset is half the 33px sprite height. --pc-leg is the duration of one
+     leg; PacketSprite inherits it to flip the mascot's facing at each turn. */
   .pc-packet {
+    --pc-leg: 4.5s;
     position: absolute;
     top: calc(50% - 17px);
     left: 6px;
@@ -106,7 +108,7 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
     border: 0;
     background: none;
     cursor: pointer;
-    animation: pc-fly 4.5s steps(26, jump-none) infinite alternate;
+    animation: pc-fly var(--pc-leg) steps(26, jump-none) infinite alternate;
   }
   .pc-packet.is-paused {
     animation-play-state: paused;
