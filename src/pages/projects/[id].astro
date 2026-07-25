@@ -23,13 +23,13 @@ const { Content } = await render(project);
   <main class="max-w-5xl mx-auto px-6 py-12">
     <a
       href="/projects"
-      class="inline-block text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors mb-5 cursor-pointer"
+      class="inline-block text-[13px] font-mono text-muted-foreground hover:text-foreground transition-colors mb-5 cursor-pointer"
     >
       ← projects / {p.name}
     </a>
 
     <div class="flex items-center gap-3 mb-3">
-      <h1 class="font-bold font-mono text-2xl text-foreground">{p.name}</h1>
+      <h1 class="font-bold font-mono text-[26px] text-foreground">{p.name}</h1>
       <StatusBadge status={p.status} />
     </div>
 
@@ -51,7 +51,7 @@ const { Content } = await render(project);
           ))
         }
       </div>
-      <div class="text-[10px] font-mono text-primary">demo loading…</div>
+      <div class="text-[13px] font-mono text-primary">demo loading…</div>
     </div>
 
     <div class="grid grid-cols-[1.7fr_1fr] gap-6">
@@ -64,22 +64,22 @@ const { Content } = await render(project);
         </div>
       </div>
       <div class="bg-card border border-border rounded p-4">
-        <div class="text-[9px] font-mono text-muted-foreground mb-3">links</div>
+        <div class="text-[12px] font-mono text-muted-foreground mb-3">links</div>
         <div class="flex flex-col gap-2">
           {
             ["github ↗", "release notes ↗"].map((l) => (
-              <span class="text-[11px] font-mono text-primary hover:underline cursor-pointer">
+              <span class="text-[14px] font-mono text-primary hover:underline cursor-pointer">
                 {l}
               </span>
             ))
           }
         </div>
-        <div class="mt-5 text-[9px] font-mono text-muted-foreground mb-3">meta</div>
+        <div class="mt-5 text-[12px] font-mono text-muted-foreground mb-3">meta</div>
         <div class="flex flex-col gap-1.5">
-          <div class="text-[10px] font-mono text-foreground/70">
+          <div class="text-[13px] font-mono text-foreground/70">
             status: <span class="text-foreground">{p.status}</span>
           </div>
-          <div class="text-[10px] font-mono text-foreground/70">
+          <div class="text-[13px] font-mono text-foreground/70">
             stack: <span class="text-foreground">{p.tags.join(", ")}</span>
           </div>
         </div>

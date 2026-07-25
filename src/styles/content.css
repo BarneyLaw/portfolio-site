@@ -1,7 +1,7 @@
 /* Styling for rendered MDX bodies (blog posts, project writeups). Keeps the
    mono aesthetic; avoids pulling in the Tailwind typography plugin. */
 .mdx-content {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.8;
   color: color-mix(in srgb, var(--foreground) 80%, transparent);
 }

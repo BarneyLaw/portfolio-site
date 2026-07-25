@@ -14,7 +14,7 @@ const filters = [
 ];
 
 const BTN_BASE =
-  "text-[10px] font-mono px-3 py-1.5 rounded cursor-pointer transition-colors";
+  "text-[13px] font-mono px-3 py-1.5 rounded cursor-pointer transition-colors";
 const BTN_ACTIVE = "bg-primary text-white";
 const BTN_INACTIVE =
   "border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground";
@@ -22,8 +22,8 @@ const BTN_INACTIVE =
 
 <Layout title="reviews · packetcraft">
   <main class="max-w-5xl mx-auto px-6 py-12">
-    <h1 class="font-bold font-mono text-3xl text-foreground mb-3">reviews</h1>
-    <p class="text-[12px] font-mono text-muted-foreground mb-5">
+    <h1 class="font-bold font-mono text-[32px] text-foreground mb-3">reviews</h1>
+    <p class="text-[15px] font-mono text-muted-foreground mb-5">
       verdicts only — no stars, no affiliate links
     </p>
 
@@ -53,16 +53,16 @@ const BTN_INACTIVE =
               <div class="flex items-center justify-between gap-3 mb-2.5">
                 <div class="flex items-center gap-2">
                   <Tag muted>{review.data.type}</Tag>
-                  <span class="font-bold font-mono text-[13px] text-foreground group-hover:text-primary transition-colors">
+                  <span class="font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors">
                     {review.data.name}
                   </span>
                 </div>
                 <VerdictBadge verdict={review.data.verdict} />
               </div>
-              <div class="text-[11px] font-mono text-muted-foreground leading-relaxed">
+              <div class="text-[14px] font-mono text-muted-foreground leading-relaxed">
                 {review.data.excerpt}
               </div>
-              <div class="mt-2 text-[9px] font-mono text-muted-foreground">
+              <div class="mt-2 text-[12px] font-mono text-muted-foreground">
                 {review.data.date}
               </div>
             </div>
@@ -74,7 +74,7 @@ const BTN_INACTIVE =
 
   <script>
     const BTN_BASE =
-      "text-[10px] font-mono px-3 py-1.5 rounded cursor-pointer transition-colors";
+      "text-[13px] font-mono px-3 py-1.5 rounded cursor-pointer transition-colors";
     const BTN_ACTIVE = "bg-primary text-white";
     const BTN_INACTIVE =
       "border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground";
