@@ -15,12 +15,13 @@ const gradient = stops ?? [
 
 <script>
   import g from "../../data/yorha.json";
-  for (const cv of document.querySelectorAll(".yorha-syntax")) {
-    const stops = JSON.parse(cv.dataset.stops);
+  for (const cv of document.querySelectorAll<HTMLCanvasElement>(".yorha-syntax")) {
+    const stops: [number, [number, number, number]][] = JSON.parse(cv.dataset.stops!);
     cv.width = g.w; cv.height = g.h;
     const ctx = cv.getContext("2d");
-    const at = (t) => {
-      let a = stops[0], b = stops.at(-1);
+    if (!ctx) continue;
+    const at = (t: number) => {
+      let a = stops[0], b = stops.at(-1)!;
       for (let i = 0; i < stops.length - 1; i++)
         if (t >= stops[i][0] && t <= stops[i + 1][0]) { a = stops[i]; b = stops[i + 1]; break; }
       const k = (t - a[0]) / (b[0] - a[0] || 1);
