@@ -1,0 +1,28 @@
+---
+const { scale = 2, solid = "#15151c", edge = "#767683", alt = "YoRHa emblem" } = Astro.props;
+---
+<canvas
+  class="yorha-pixel"
+  role="img"
+  aria-label={alt}
+  style={`width:${160 * scale / 4}px; image-rendering:pixelated;`}
+  data-solid={solid}
+  data-edge={edge}
+></canvas>
+
+<script>
+  import g from "../../data/yorha.json";
+  for (const cv of document.querySelectorAll(".yorha-pixel")) {
+    const { solid, edge } = cv.dataset;
+    cv.width = g.w; cv.height = g.h;
+    const ctx = cv.getContext("2d");
+    for (let r = 0; r < g.h; r++) {
+      for (let c = 0; c < g.w; c++) {
+        const v = g.rows[r].charCodeAt(c) - 48;
+        if (v < 2) continue;
+        ctx.fillStyle = v >= 5 ? solid : edge;
+        ctx.fillRect(c, r, 1, 1);
+      }
+    }
+  }
+</script>

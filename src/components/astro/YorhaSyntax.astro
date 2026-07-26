@@ -1,0 +1,40 @@
+---
+const { scale = 2, alt = "YoRHa emblem", stops } = Astro.props;
+const gradient = stops ?? [
+  [0.00, [203, 166, 247]], [0.28, [137, 180, 250]], [0.50, [148, 226, 213]],
+  [0.72, [166, 227, 161]], [1.00, [249, 226, 175]],
+];
+---
+<canvas
+  class="yorha-syntax"
+  role="img"
+  aria-label={alt}
+  style={`width:${160 * scale / 4}px; image-rendering:pixelated;`}
+  data-stops={JSON.stringify(gradient)}
+></canvas>
+
+<script>
+  import g from "../../data/yorha.json";
+  for (const cv of document.querySelectorAll(".yorha-syntax")) {
+    const stops = JSON.parse(cv.dataset.stops);
+    cv.width = g.w; cv.height = g.h;
+    const ctx = cv.getContext("2d");
+    const at = (t) => {
+      let a = stops[0], b = stops.at(-1);
+      for (let i = 0; i < stops.length - 1; i++)
+        if (t >= stops[i][0] && t <= stops[i + 1][0]) { a = stops[i]; b = stops[i + 1]; break; }
+      const k = (t - a[0]) / (b[0] - a[0] || 1);
+      return [0, 1, 2].map((j) => Math.round(a[1][j] + (b[1][j] - a[1][j]) * k));
+    };
+    for (let r = 0; r < g.h; r++) {
+      const [cr, cg, cb] = at(r / (g.h - 1));
+      for (let c = 0; c < g.w; c++) {
+        const v = g.rows[r].charCodeAt(c) - 48;
+        if (v < 2) continue;
+        const m = v >= 5 ? 1 : 0.5;
+        ctx.fillStyle = `rgb(${(cr * m) | 0},${(cg * m) | 0},${(cb * m) | 0})`;
+        ctx.fillRect(c, r, 1, 1);
+      }
+    }
+  }
+</script>

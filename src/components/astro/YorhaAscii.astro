@@ -1,0 +1,12 @@
+---
+import g from "../../data/yorha-ascii.json";
+const ramp = " .:-=+*#%@";
+const art = g.rows
+  .map((row) => [...row].map((ch) => ramp[+ch] ?? " ").join(""))
+  .join("\n");
+---
+<pre
+  class="font-mono text-foreground whitespace-pre leading-none select-none"
+  style="font-size:6.5px; line-height:6.5px;"
+  aria-label="YoRHa emblem (ASCII)"
+>{art}</pre>

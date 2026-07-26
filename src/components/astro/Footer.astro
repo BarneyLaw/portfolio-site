@@ -1,6 +1,5 @@
 ---
-import PixelArt from "./PixelArt.astro";
-import ruri from "../../data/ruri-pixels.json";
+import YorhaPixel from "./YorhaPixel.astro";
 
 const siteLinks = [
   { label: "Projects", href: "/projects" },
@@ -70,12 +69,15 @@ const elsewhere = [
       <div
         class="flex items-center justify-center p-3 text-center"
       >
-        <PixelArt sprite={ruri} scale={1} alt="Ruri" />
+        <YorhaPixel scale={4} alt="YoRHa emblem" />
       </div>
     </div>
     <div class="mt-6 pt-4 border-t border-border flex justify-between">
       <span class="text-[13px] font-mono text-muted-foreground">
         © 2026 packetcraft · served by k3s @ home
+      </span>
+      <span class="text-[13px] font-mono text-muted-foreground" style="color: #b0abab;">
+        AUDENTES FORTUNA IUVAT
       </span>
       <span class="text-[13px] font-mono text-muted-foreground">
         uptime 99.4% · build #1284

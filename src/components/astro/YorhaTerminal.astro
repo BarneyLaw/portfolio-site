@@ -1,0 +1,20 @@
+---
+import g from "../../data/yorha-ascii.json";
+const art = g.rows
+  .map((row, r) =>
+    [...row]
+      .map((ch, c) => {
+        const v = +ch;
+        if (v >= 4) return (r * 13 + c * 7) % 2 ? "1" : "0";
+        if (v >= 2) return (r + c) % 4 === 0 ? ":" : " ";
+        return " ";
+      })
+      .join("")
+  )
+  .join("\n");
+---
+<pre
+  class="font-mono whitespace-pre leading-none select-none"
+  style="font-size:6.5px; line-height:6.5px; color:#39ff5a; text-shadow:0 0 4px rgba(57,255,90,.75);"
+  aria-label="YoRHa emblem (binary)"
+>{art}</pre>
