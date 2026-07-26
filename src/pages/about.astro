@@ -5,12 +5,10 @@ import Tag from "../components/astro/Tag.astro";
 
 const stack = [
   "Go",
-  "C++",
-  "k3s",
+  "Kubernetes",
   "Postgres",
   "Ansible",
   "networking",
-  "Arch Linux",
   "Ubuntu Server",
 ];
 const links = ["github ↗", "email ↗", "rss ↗"];
@@ -18,27 +16,24 @@ const links = ["github ↗", "email ↗", "rss ↗"];
 
 <Layout title="about · packetcraft">
   <main class="max-w-5xl mx-auto px-6 py-12">
-    <div class="flex gap-6 items-start mb-8">
+    <div class="mb-8">
       <Hatch
-        class="w-24 h-24 flex-none rounded-lg border-2 border-dashed border-muted"
+        class="w-24 h-24 rounded-lg border-2 border-dashed border-muted mb-6"
         label="portrait"
       />
-      <div class="flex-1">
-        <h1 class="font-bold font-mono text-[32px] text-foreground mb-3">about</h1>
-        <p class="text-[16px] font-mono text-foreground/80 leading-[1.8]">
-          I'm a self-taught tinkerer based somewhere with fast internet and a
-          suspiciously large number of network switches. I work on networking
-          infrastructure by day and run a homelab by night. 
-        </p>
-      </div>
+      <h1 class="font-bold font-mono text-[32px] text-foreground mb-3">about</h1>
+      <p class="text-[16px] font-mono text-foreground/80 leading-[1.8]">
+        I'm a third year computer science student in one of the the few city states in the world.
+        I have a strong interest networks, graphics and the infrastructure that makes applications possible. I like to build things, and I like to write about them. This site is a place for both.
+      </p>
     </div>
 
     <div class="text-[16px] font-mono text-foreground/80 leading-[1.8] mb-8">
       <p>
         This site documents things I build, hardware I test, and observations I
         want to write down somewhere. It runs on a 4-node k3s cluster in my
-        basement and serves as both a portfolio and a way to force myself to
-        explain things clearly.
+        house and serves as both a portfolio and a way to force myself to
+        document & explain things clearly.
       </p>
     </div>
 
@@ -57,7 +52,7 @@ const links = ["github ↗", "email ↗", "rss ↗"];
       <div class="text-[13px] font-mono text-primary mb-2">// now</div>
       <p class="text-[15px] font-mono text-foreground/80 leading-[1.7]">
         Migrating personal services to the k3s cluster · writing obsync ·
-        playing Warframe badly
+        gaming · reading about networks, graphics, and programming languages ·
       </p>
     </div>
 
