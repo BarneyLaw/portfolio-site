@@ -34,11 +34,10 @@ const { Content } = await render(review);
       <VerdictBadge verdict={r.verdict} />
     </div>
 
-    <div class="grid grid-cols-[1.7fr_1fr] gap-6">
-      <article class="mdx-content">
-        <Content />
-      </article>
-      <div class="bg-card border border-border rounded p-4 h-fit">
+    {/* The sidebar floats rather than taking a grid column, so it ends with its
+        own content and the writeup reflows into the full width underneath it. */}
+    <div>
+      <aside class="float-right w-80 ml-6 mb-4 bg-card border border-border rounded p-4">
         <div class="text-[12px] font-mono text-muted-foreground mb-3">verdict</div>
         <VerdictBadge verdict={r.verdict} />
         <div class="mt-5 text-[12px] font-mono text-muted-foreground mb-3">meta</div>
@@ -50,7 +49,13 @@ const { Content } = await render(review);
             reviewed: <span class="text-foreground">{r.date}</span>
           </div>
         </div>
-      </div>
+      </aside>
+
+      <article class="mdx-content">
+        <Content />
+      </article>
+
+      <div class="clear-both"></div>
     </div>
   </main>
 </Layout>
