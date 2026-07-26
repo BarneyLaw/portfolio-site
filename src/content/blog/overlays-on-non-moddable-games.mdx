@@ -1,0 +1,44 @@
+---
+title: "Building an Overlay for a Game You Cannot Mod"
+date: "2026-07-26"
+readTime: "10 min"
+category: "Projects"
+excerpt: "The Warframe relic overlay project, and everything you have to work around when the game gives you no API, no mod support, and no way in."
+featured: false
+---
+
+Some games ship with mod support, an API, or at least a documented way to read game state. Warframe ships with none of that for the thing I wanted. So I built a relic overlay the hard way, from outside the process, and this is a writeup of the technical difficulties that come with helping yourself when the game refuses to help you.
+
+## The problem
+
+The specific goal was simple to state and annoying to achieve: show a small overlay on top of the game that gives the player relevant information at the moment they need it, without touching the game's files, without injecting into its process, and without doing anything that looks like the kind of tampering that gets accounts flagged. Read-only, external, and polite.
+
+That constraint, external and non-invasive, is what makes the whole thing interesting. If I could just read the game's memory or hook into it, this would be a weekend project. The entire challenge is that I decided not to, both for account-safety reasons and because reaching into a live process you do not control is fragile and rude.
+
+## Getting the information out
+
+If you cannot ask the game for its state, you have to observe it from the outside like any other spectator. The realistic sources are the pixels on the screen and whatever the game chooses to write down where you can read it.
+
+The screen is the richest source and the most painful. Reading information off rendered pixels means capturing a region of the display and interpreting it, which drags in optical character recognition and all its failure modes. Text on a busy, animated game background is close to a worst case for OCR. The background moves, transparency and glow effects bleed into the characters, and the same word rendered over two different scenes can read completely differently. A huge amount of the work is not "run OCR" but "make the input clean enough that OCR has a chance," cropping tightly, normalizing contrast, handling the cases where the capture caught a frame mid-transition.
+
+The other source is anything the game persists to disk that is not locked. Log files are the friendly version of this. If the game writes events out to a log as it runs, you can tail that file and react to it, which is far more reliable than reading pixels because it is actual text rather than an image of text. The catch is you only get whatever the developers happened to log, which is rarely exactly what you want and never in a format designed for you.
+
+Most of the project ends up being a negotiation between these two: use the log where you can because it is trustworthy, fall back to reading the screen where you must because that is the only place the information exists.
+
+## Drawing on top without getting in the way
+
+An overlay is a window that has to sit above a fullscreen game, stay clickable-through so it never steals input, and update without stuttering the thing underneath it. On the desktop side this is a solved-but-finicky problem. You want a transparent, always-on-top, layered window that passes mouse events straight through to the game so the player never even notices it is a separate window.
+
+The finicky part is fullscreen. Exclusive fullscreen and overlays do not get along, because in true exclusive mode the game owns the display output and there is no room for another window to draw over it. Borderless windowed is the mode where overlays actually behave, so part of the practical advice that falls out of the project is simply "run the game borderless," which is a slightly unsatisfying answer to a hard technical constraint but an honest one.
+
+## Timing, or the part nobody warns you about
+
+The hardest category of bug in a project like this is not any single component. It is timing. You are reacting to events you observed indirectly, which means you are always a little behind reality, and "a little behind" is sometimes fine and sometimes wrong.
+
+If you poll the screen too often you burn CPU and battery for nothing. Poll too rarely and you miss the exact half-second window where the information you needed was on screen. React to a log line the instant it appears and you sometimes react to a state the game has already moved past. Every one of these is a small judgment call, and getting them subtly wrong produces an overlay that is usually right and occasionally, confusingly, not, which is worse than one that is simply broken because you stop trusting it.
+
+## What the project actually taught
+
+The lesson that generalizes beyond Warframe is this: when a system gives you no supported way in, all your remaining options are forms of observing it from the outside and inferring state you were never handed directly. Screen capture, OCR, log tailing, and a lot of careful timing are the tools of that trade. None of them are glamorous and all of them are fragile, and building something reliable out of fragile parts, gracefully degrading when the screen read fails, cross-checking against the log when both are available, is the actual engineering.
+
+It is a strange kind of project because success looks like a tiny box of text in the corner of the screen, and almost none of the difficulty is visible in the result. That gap between how simple it looks and how much is happening underneath is, I think, most of why it was worth building.

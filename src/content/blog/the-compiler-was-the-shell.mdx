@@ -1,0 +1,46 @@
+---
+title: "The Compiler Was the Shell: What TempleOS Got Right"
+date: "2026-07-26"
+readTime: "7 min"
+category: "Computing"
+excerpt: "Terry Davis built a single compiler that did both ahead-of-time and just-in-time compilation, and made it the way you talked to the whole operating system. Almost nothing today matches that."
+featured: false
+---
+
+There is a design idea buried in TempleOS that is more interesting than the tragic myth that usually surrounds it, and it is worth pulling out on its own terms. Terry Davis built the HolyC compiler so that it could compile ahead of time and just in time, from a single unified compiler, and then he made that compiler the thing you used to operate the entire system. When you understand what that actually means, most modern languages look clumsy by comparison.
+
+## Two ways to turn source into something that runs
+
+Start with the distinction, because the whole idea rests on it.
+
+Ahead-of-time compilation is the traditional path. Source code goes in, machine code comes out, and you run the result later. This is how C and C++ work. You compile once, you get a binary, you execute it whenever.
+
+Just-in-time compilation happens at runtime. The code is compiled on the fly, as the program runs, into native machine code in memory, and executed immediately. Java and C# use JIT, but with a twist: they compile to an intermediate bytecode first, and a virtual machine turns that bytecode into native code while running.
+
+Most systems pick one of these and commit. C and C++ are AOT only. The classic managed languages lean on JIT through a bytecode layer. The two worlds rarely meet in a single tool.
+
+## What Davis actually built
+
+HolyC did both, from one compact compiler, with no intermediate bytecode step. You could compile HolyC to a binary ahead of time the traditional way. You could also type code straight at the command line and have it compiled to native machine code in memory and run instantly. Same compiler, both modes, going directly from source to native x86-64 with no interpreter and no bytecode in between.
+
+The consequence is the part that stays with me. In TempleOS the shell itself was essentially the compiler. When you typed at the command line or included a file, it got compiled and executed on the spot. There was no separate "programming environment" you dropped into and then left. Writing a program and using the operating system were the same activity. You could write a function, watch it compile and run immediately, and also save a compiled binary for later if you wanted one.
+
+That blurring of "writing a program" and "using the computer" is closer in spirit to an old Lisp machine or a Smalltalk environment than to a normal C workflow, except it produced native machine code rather than interpreted or bytecode execution. The command line was the compiler. The whole system was live-programmable, all the way down, in native code.
+
+## Does anything today do this
+
+Sort of, and the "sort of" is the interesting part.
+
+Dart is the cleanest modern example. The Dart VM compiles JIT during development, which is what powers hot reload, and for production it compiles AOT to native machine code. Same language, both modes, chosen by context.
+
+Java and Kotlin traditionally run JIT on the JVM, but GraalVM's native-image can compile them AOT to a standalone binary, so the ecosystem covers both, just through separate toolchains. C# and .NET are the same story: JIT by default through the runtime, with NativeAOT shipping ahead-of-time binaries since .NET 7. Julia is JIT by default and can be packaged AOT.
+
+Rust, for all its modernity, does not do this at all. It is purely ahead of time through LLVM, with no JIT story.
+
+But notice what separates all of these from HolyC. In the modern languages, AOT and JIT are two different compilation pipelines or toolchains bolted onto the same language. You reach for one set of tools or the other. Davis built a single compiler that did both and was compact enough to be the default way you interacted with the machine. Nobody has really matched that specific thing, the one small unified compiler that is also your shell.
+
+## Why it is worth remembering
+
+You do not have to admire everything about TempleOS to see the merit in this one decision. A system where the act of programming and the act of using the computer are literally the same thing, where there is no wall between the source you write and the machine that runs it, is a genuinely different way to think about what an operating system is for.
+
+Most of computing has moved in the opposite direction, toward more layers, more separation between the person and the metal, more tools standing between your source code and the machine actually executing it. TempleOS collapsed all of that into one compiler you talked to directly. It is a road almost nobody took, and it is worth understanding on its technical merits rather than only as a footnote to a sadder story.

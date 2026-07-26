@@ -1,0 +1,25 @@
+---
+name: "Intel Core i7-9700K"
+type: "HARDWARE"
+verdict: "MIXED"
+date: "2026-07-26"
+excerpt: "Seven years in and it still games fine. It's the multithreaded work where the eight-cores-no-hyperthreading decision finally shows its age."
+---
+
+I have been running an i7-9700K as my daily driver CPU for about seven years now, and I think that is long enough to say something honest about it rather than something enthusiastic.
+
+## The good part
+
+For gaming, it is still perfectly serviceable. Eight physical cores clocking high, paired with a reasonable GPU, and most titles do not care that the chip is old. Frame times are stable, single-threaded performance is strong, and the games I actually play have never made me feel like the CPU was the bottleneck. If your workload is "one heavy foreground application at a time," this chip aged very gracefully.
+
+The unlocked multiplier was also worth having. A modest overclock on a decent cooler bought a few years of extra headroom, and thermals stayed manageable as long as you were not doing anything sustained and parallel.
+
+## The part that aged badly
+
+Here is where the mixed verdict comes from. The 9700K was Intel's odd generation where the i7 shipped with eight cores and no hyperthreading, so you get eight threads total instead of sixteen. At launch that felt fine. Today, anything that actually scales across threads, compiling, running containers locally, spinning up a few VMs, batch processing, feels the ceiling almost immediately.
+
+I noticed it most once my own work shifted toward infrastructure and systems things rather than just games. The moment you are building images, running a local cluster, and keeping a browser with thirty tabs alive at the same time, eight threads runs out fast. A same-era i9 or a Ryzen with SMT would have handled that with room to spare.
+
+## Verdict
+
+Mixed, and I mean mixed rather than a soft "recommended with caveats." As a gaming CPU that refuses to die, it earned its keep several times over. As a workstation chip for the kind of parallel, many-process workloads I care about now, the thread count is the wall you hit and you cannot overclock your way past it. If you found one cheap today purely for a gaming build, fine. For anything multithreaded, look at literally anything with SMT.

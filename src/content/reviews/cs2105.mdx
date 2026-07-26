@@ -1,0 +1,25 @@
+---
+name: "CS2105 Introduction to Computer Networks (NUS)"
+type: "SOFTWARE"
+verdict: "MIXED"
+date: "2026-07-26"
+excerpt: "A solid on-ramp into networking that gives you the vocabulary and the mental model. Just know that some of what you learn is more historical than current."
+---
+
+CS2105 is NUS's introductory computer networks module, and I think it is worth taking. It is also worth going in with clear eyes about what it is and is not.
+
+## What it does well
+
+As a first exposure to networking, it is a genuinely good starting point. It walks you top-down through the stack, application layer, transport, network, link, and by the end you have a working mental model of what actually happens when a packet leaves your machine and arrives somewhere else. The vocabulary alone is valuable. Before this module "TCP handshake" and "congestion control" and "DNS resolution" were phrases I could nod along to; after it, they were concepts I could reason about.
+
+The transport layer coverage is the strongest part. Reliable data transfer built up from unreliable channels, the sliding window, flow control versus congestion control, the whole story of how TCP earns its guarantees. That section is the one that stuck with me and the one that still comes up when I am doing infrastructure work.
+
+## The caveat
+
+Here is where the "recommended with caveat" comes from. Some of the material is dated. Networking as taught in an intro module leans on the textbook canon, and a chunk of that canon describes protocols and assumptions that are either legacy or actively being replaced in the real world. You will learn the classical TCP congestion story in detail while things like QUIC and modern transport get a lighter touch, if they come up at all. You learn the idealized version of concepts that in practice have moved on.
+
+This is not a knock on the teaching so much as an observation about intro courses in a fast-moving field. The fundamentals are eternal, layering, addressing, the end-to-end principle, but some of the specifics you memorize are closer to history than to what you would deploy today.
+
+## Verdict
+
+Recommended with a caveat. Take it, because you need the foundation and this is a clean way to get it. Just treat it as the beginning rather than the destination, and be ready to update some of the specifics against how networks actually run in 2026 once you get into the real thing.
