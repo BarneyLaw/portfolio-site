@@ -1,21 +1,82 @@
 ---
-name: k3s cluster
+title: "Building a Homelab Kubernetes Cluster From Spare Parts"
 status: BUILDING
 order: 2
 tags: ["k3s", "Kubernetes", "Ansible"]
 meta: "k3s · self-host"
-description: "Four-node bare-metal k3s cluster running at home on repurposed Intel NUCs. Provisioned with Ansible, serving this site and a handful of personal services behind Traefik."
+description: "An honest account of a multi-node K3s cluster: what got built, why each decision was made, and where I deliberately punted."
 codeSnippet: |-
   $ kubectl get nodes
-  NAME    STATUS   ROLES
-  nuc-0   Ready    control-plane
-  nuc-1   Ready    worker
+  NAME       STATUS   ROLES                  AGE   VERSION
+  deus       Ready    control-plane,worker   74d   v1.35.4+k3s1
+  legion-1   Ready    worker                 73d   v1.35.4+k3s1
+  nebula     Ready    storage,worker         49d   v1.35.5+k3s1
 ---
 
-A four-node bare-metal k3s cluster running at home on repurposed Intel NUCs.
-The whole thing is provisioned with Ansible from a clean Ubuntu install, so I
-can rebuild a node from scratch in minutes.
+I've been building a multi-node K3s cluster out of hardware I already had lying around. This is a portfolio project, but it is also the kind of thing I wish existed as a reference when I started: an honest account of what got built, why each decision was made, and where I deliberately punted. This post covers the state of things so far.
 
-It serves this site plus a handful of personal services behind Traefik, with
-cert-manager handling TLS. Storage is Longhorn for now, though I'm still
-deciding whether that's the right call for a cluster this small.
+## Why build this at all
+
+The short version: I want to work in CDN, SRE, and platform engineering, and the fastest way to understand production infrastructure is to run some. Reading about GitOps is not the same as watching ArgoCD revert a change you made by hand thirty seconds ago. Reading about distributed storage is not the same as formatting a dedicated disk because Longhorn refuses to sit on top of ZFS.
+
+So the goal was never "self-host some apps." Plenty of people do that with a single Docker host and a folder of compose files. The goal was to demonstrate production-grade practices end to end: GitOps as the source of truth, real observability, distributed storage with replicas, a split public/private ingress model, and custom services built to run on top of all of it. Every component is chosen to map to a skill I'd actually use in the roles I'm targeting.
+
+The guiding principle throughout has been simple: validate foundations before layering complexity. Get the boring plumbing right first, then build the interesting things on top of a base you trust.
+
+## The hardware
+
+Three always-on x86 nodes, all running Ubuntu Server 24.04 with static IPs:
+
+- **deus**, a Lenovo M910q tiny PC, running the control plane. It has some thermal headroom concerns, so it stays lean: ArgoCD, the tunnel, WireGuard, and Traefik are pinned here, and it holds no storage replicas.
+- **nebula**, an older desktop with a GTX 1080 and a ZFS pool. This is the primary NAS and Compose host, and also doubles as a K3s worker and a storage replica target.
+- **legion**, a laptop with the battery removed so it runs as an always-on worker. It contributes a dedicated SSD partition as the second storage replica.
+
+I'm honest with myself that deus is a single point of failure for the control plane. Genuine high availability needs three server nodes for quorum, and two is actually worse than one because you lose quorum the moment either dies. So HA is deferred until I add dedicated mini-PCs for an etcd tier, with the current machines demoted to pure workers. Better to name the gap than pretend it isn't there.
+
+## What's actually running
+
+The core infrastructure layers are all operational now.
+
+**Ingress** uses a split model. Public traffic comes in through a Cloudflare Tunnel to `*.packetcraft.dev`. Private and admin traffic goes over Tailscale and WireGuard to `*.lab.packetcraft.dev`. The important design rule here is that both the tunnel and the VPN are dumb pipes. Traefik is the single routing brain for everything. I refuse to run a second general-purpose ingress controller, because the moment routing logic lives in two places you've lost the thread on where traffic actually goes.
+
+**GitOps** runs on ArgoCD watching a config repo. The pattern is two repos: a source repo where CI lives, and a config repo that is the single source of truth for what runs in the cluster. GitHub Actions builds images to the registry and then writes the new image tag back into the config repo. ArgoCD sees the commit and reconciles. The nice property is that every deploy is pinned to an exact build SHA, so there's never a "wait, what's actually running right now" moment. Off-the-shelf images skip CI entirely and just get a manifest.
+
+**Storage** is Longhorn, with replicas on nebula and legion and deus deliberately excluded. One lesson worth writing down: Longhorn cannot live on ZFS. It wants a dedicated disk formatted ext4 or XFS at a stable mount path, full stop. That sent me back to repartition before it would behave.
+
+**Observability** is the kube-prometheus-stack: Prometheus scraping, Grafana dashboards, a unified node overview with a template variable so I can flip between machines. The GPU on nebula gets scraped through a separate exporter running as a Compose service, wired into Prometheus with a scrape config. Grafana's admin password lives in a sealed secret rather than in the repo in plaintext.
+
+**Secrets** are handled with Sealed Secrets, which lets encrypted secrets live safely in Git. The one non-negotiable operational task here is backing up the private key off-cluster. Lose that key and every sealed secret in the repo becomes undecryptable garbage.
+
+**Databases** run on CloudNativePG. The strategy is one Postgres cluster per application, with WAL backups shipped to an S3-compatible store running on the NAS, and a daily scheduled backup. Postgres is the default for anything in the cluster that needs a database.
+
+Rounding it out: cert-manager for real wildcard certs (browsers hard-block plaintext on `.dev` domains, so this isn't optional), MetalLB for load balancer IPs, and patch management via unattended security upgrades plus a controller that handles the cordon-drain-reboot cycle so nodes can reboot for kernel updates without me babysitting them.
+
+## The design boundaries that made everything simpler
+
+A few principles have done a lot of load-bearing work.
+
+**NAS owns data, K3s owns services.** There is exactly one deliberate exception, Seafile, which runs on Compose directly on the NAS for data-safety reasons. Everything else, including the backends and databases for services I'm writing myself, lives in K3s. Keeping that line clear stops the "where does this belong" question from coming up every single time.
+
+**One routing brain.** Mentioned above, but it's worth repeating because it's the rule I'm most tempted to break and most glad I haven't.
+
+**Ansible below the cluster, ArgoCD inside it.** Node-level state is one tool's job; in-cluster workloads are another's. They must not overlap. The moment they do, you get two systems fighting over the same resource.
+
+## What's been genuinely hard
+
+A homelab writeup that only lists wins is lying by omission. Some of the real friction:
+
+The **ArgoCD push-triggered sync** is broken and it's my highest-priority fix. Right now changes sync on a poll interval instead of instantly on push, which makes debugging the pipeline slower than it should be. It's the kind of gap that's easy to work around and therefore easy to leave broken, which is exactly why it's next.
+
+**Silent drift from unwatched config.** The directory holding ArgoCD's own Application definitions isn't watched by anything, so changes there need a manual apply. That's a recurring source of "why didn't that take effect," and it's a design smell I need to close by making ArgoCD manage its own app definitions.
+
+**Tool ambiguity that bites quietly.** After adopting Longhorn, a plain `kubectl get backup` resolves to Longhorn's resource, not my Postgres backups. You have to qualify the full API group or you get a confidently wrong answer. Small thing, but exactly the kind of thing that eats twenty minutes when you're tired.
+
+**Server-side apply constraints.** Some of the monitoring stack's custom resources exceed the annotation size limit under the default apply mode, so they need server-side apply at the resource level. Learning that app-level and resource-level server-side apply are mutually exclusive was its own small adventure.
+
+## What's next
+
+The near-term queue: fix the ArgoCD webhook, then stand up the first real application, a portfolio site with a Go backend and a Postgres database, because it's lower-complexity than the sync tool and a good end-to-end validation of the pipeline. After that comes obsync, a self-hosted Obsidian sync system with a hand-written sync protocol, which is deliberately sequenced later because it's the harder build.
+
+Then the operational maturity work that's easy to skip and important not to: a proper restore drill before any real data lands in Postgres, alerting routes, resource requests on workloads, and control-plane snapshots. None of it is glamorous. All of it is the difference between a demo and something you'd trust.
+
+That's the state of things. The foundation is solid, the interesting builds are next, and I'm keeping an honest log of the gaps as I go.
