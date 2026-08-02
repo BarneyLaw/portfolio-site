@@ -1,14 +1,17 @@
 ---
+import { Image } from "astro:assets";
 import Layout from "../layouts/Layout.astro";
-import Hatch from "../components/astro/Hatch.astro";
 import Tag from "../components/astro/Tag.astro";
+import profilePic from "../img/icons/ruri_thumbs_up.png";
 
 const stack = [
+  "Astro",
+  "TypeScript",
   "Go",
   "Kubernetes",
   "Postgres",
   "Ansible",
-  "networking",
+  "NGINX",
   "Ubuntu Server",
 ];
 const links = ["github ↗", "email ↗", "rss ↗"];
@@ -17,9 +20,10 @@ const links = ["github ↗", "email ↗", "rss ↗"];
 <Layout title="about · packetcraft">
   <main class="max-w-5xl mx-auto px-6 py-12">
     <div class="mb-8">
-      <Hatch
-        class="w-24 h-24 rounded-lg border-2 border-dashed border-muted mb-6"
-        label="portrait"
+      <Image
+        src={profilePic}
+        alt="profile picture"
+        class="w-48 h-48 rounded-full mb-4"
       />
       <h1 class="font-bold font-mono text-[32px] text-foreground mb-3">about</h1>
       <p class="text-[16px] font-mono text-foreground/80 leading-[1.8]">
@@ -35,11 +39,20 @@ const links = ["github ↗", "email ↗", "rss ↗"];
         house and serves as both a portfolio and a way to force myself to
         document & explain things clearly.
       </p>
+      <br/>
+      <p>
+        I also write about things that interest me on my blog, and I review many things ranging from coursework to games. If you want to get in touch,
+        you can reach me via email or on GitHub.
+      </p>
+      <br/>
+      <p>
+        All the artwork on this site is free to use under the CC0 license. However, you may not copy the design of this site wholesale
+      </p>
     </div>
 
     {/* Stack */}
     <div class="mb-8">
-      <div class="text-[14px] font-mono text-muted-foreground mb-3">// stack</div>
+      <div class="text-[14px] font-mono text-muted-foreground mb-3">// stack (for this site)</div>
       <div class="flex flex-wrap gap-2">
         {stack.map((t) => <Tag>{t}</Tag>)}
       </div>
