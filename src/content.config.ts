@@ -8,37 +8,49 @@ import { glob } from "astro/loaders";
 
 const blog = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/blog" }),
-  schema: z.object({
-    title: z.string(),
-    date: z.string(),
-    readTime: z.string(),
-    category: z.string(),
-    excerpt: z.string(),
-    featured: z.boolean().default(false),
-  }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      date: z.string(),
+      readTime: z.string(),
+      category: z.string(),
+      excerpt: z.string(),
+      featured: z.boolean().default(false),
+      image: image().optional(),
+      coverArt: image().optional(),
+      imageAlt: z.string().optional(),
+    }),
 });
 
 const projects = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/projects" }),
-  schema: z.object({
-    name: z.string(),
-    status: z.enum(["SHIPPED", "BUILDING", "PLANNED"]),
-    tags: z.array(z.string()),
-    meta: z.string(),
-    description: z.string(),
-    codeSnippet: z.string(),
-    order: z.number().default(0),
-  }),
+  schema: ({ image }) =>
+    z.object({
+      name: z.string(),
+      status: z.enum(["SHIPPED", "BUILDING", "PLANNED"]),
+      tags: z.array(z.string()),
+      meta: z.string(),
+      description: z.string(),
+      codeSnippet: z.string(),
+      order: z.number().default(0),
+      image: image().optional(),
+      coverArt: image().optional(),
+      imageAlt: z.string().optional(),
+    }),
 });
 
 const reviews = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/reviews" }),
-  schema: z.object({
-    type: z.enum(["HARDWARE", "SOFTWARE"]),
-    verdict: z.enum(["RECOMMENDED", "MIXED", "PASS"]),
-    name: z.string(),
-    date: z.string(),
-    excerpt: z.string(),
+  schema: ({ image }) =>
+    z.object({
+      type: z.enum(["HARDWARE", "SOFTWARE"]),
+      verdict: z.enum(["RECOMMENDED", "MIXED", "PASS"]),
+      name: z.string(),
+      date: z.string(),
+      excerpt: z.string(),
+      image: image().optional(),
+      coverArt: image().optional(),
+      imageAlt: z.string().optional(),
   }),
 });
 

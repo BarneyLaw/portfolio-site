@@ -1,4 +1,6 @@
 ---
+import { Image } from "astro:assets";
+
 import Layout from "../../layouts/Layout.astro";
 import VerdictBadge from "../../components/astro/VerdictBadge.astro";
 import Tag from "../../components/astro/Tag.astro";
@@ -48,7 +50,19 @@ const BTN_INACTIVE =
             data-type={review.data.type}
             class="bg-card border border-border rounded p-4 flex gap-4 hover:border-primary/50 transition-colors cursor-pointer group"
           >
-            <Hatch class="w-16 h-16 flex-none" label="product" />
+            {
+              review.data.image ? (
+                <Image
+                  src={review.data.image}
+                  alt={review.data.imageAlt ?? `${review.data.name} preview`}
+                  width={64}
+                  height={64}
+                  class="w-16 h-16 flex-none rounded object-cover"
+                />
+              ) : (
+                <Hatch class="w-16 h-16 flex-none" label="product" />
+              )
+            }
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between gap-3 mb-2.5">
                 <div class="flex items-center gap-2">
