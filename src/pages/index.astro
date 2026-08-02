@@ -1,4 +1,6 @@
 ---
+import { Image } from "astro:assets";
+
 import Layout from "../layouts/Layout.astro";
 import Cursor from "../components/astro/Cursor.astro";
 import Hatch from "../components/astro/Hatch.astro";
@@ -22,20 +24,34 @@ const recent = [
     label: `${topProject.data.name} — ${topProject.data.status}`,
     sub: topProject.data.meta,
     muted: false,
+    coverArt: topProject.data.coverArt,
+    coverAlt:
+      topProject.data.imageAlt ??
+      `${topProject.data.name} project cover art`,
   },
+
   topPost && {
     tag: "BLOG",
     href: `/blog/${topPost.id}`,
     label: topPost.data.title,
     sub: `${topPost.data.date} · ${topPost.data.readTime} · ${topPost.data.category}`,
     muted: true,
+    coverArt: topPost.data.coverArt,
+    coverAlt:
+      topPost.data.imageAlt ??
+      `${topPost.data.title} article cover art`,
   },
+
   topReview && {
     tag: "REVIEW",
     href: `/reviews/${topReview.id}`,
     label: `${topReview.data.name} — ${topReview.data.verdict}`,
     sub: topReview.data.excerpt,
     muted: true,
+    coverArt: topReview.data.coverArt,
+    coverAlt:
+      topReview.data.imageAlt ??
+      `${topReview.data.name} review cover art`,
   },
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 
@@ -89,7 +105,22 @@ const navCards = ["projects", "blog", "reviews"];
           href={`/blog/${featured.id}`}
           class="bg-card border border-border border-l-[3px] border-l-primary rounded-md overflow-hidden flex gap-4 p-4 mb-8 hover:border-primary/50 transition-colors cursor-pointer group"
         >
-          <Hatch class="w-28 h-20 flex-none" label="cover" />
+          {
+            featured.data.coverArt ? (
+              <Image
+                src={featured.data.coverArt}
+                alt={
+                  featured.data.imageAlt ??
+                  `${featured.data.title} cover art`
+                }
+                width={224}
+                height={160}
+                class="w-28 h-20 flex-none rounded object-cover"
+              />
+            ) : (
+              <Hatch class="w-28 h-20 flex-none" label="cover" />
+            )
+          }
           <div class="flex-1 min-w-0">
             <div class="flex gap-2 items-center">
               <span class="text-[12px] font-mono text-primary border border-primary rounded px-1.5 py-0.5">
@@ -119,7 +150,19 @@ const navCards = ["projects", "blog", "reviews"];
             href={item.href}
             class="bg-card border border-border rounded p-3 flex gap-3 hover:border-primary/40 transition-colors cursor-pointer group"
           >
-            <Hatch class="w-14 h-14 flex-none" />
+            {
+              item.coverArt ? (
+                <Image
+                  src={item.coverArt}
+                  alt={item.coverAlt}
+                  width={112}
+                  height={112}
+                  class="w-14 h-14 flex-none rounded object-cover"
+                />
+              ) : (
+                <Hatch class="w-14 h-14 flex-none" />
+              )
+            }
             <div class="flex-1 min-w-0">
               <Tag muted={item.muted}>{item.tag}</Tag>
               <div class="mt-2 font-mono text-[15px] text-foreground group-hover:text-primary transition-colors font-bold leading-snug">
@@ -132,12 +175,12 @@ const navCards = ["projects", "blog", "reviews"];
           </a>
         ))
       }
-      <div class="flex items-center gap-2 pt-2 px-1">
+      <!-- <div class="flex items-center gap-2 pt-2 px-1">
         <Sprite size={44} />
         <span class="text-[13px] font-mono text-muted-foreground">
           fetching more…
         </span>
-      </div>
+      </div> -->
     </div>
 
     {/* Quick nav cards */}

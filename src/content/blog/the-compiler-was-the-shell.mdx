@@ -1,10 +1,11 @@
 ---
-title: "The Compiler Was the Shell: What TempleOS Got Right"
+title: "The shell is the compiler, and the compiler is the shell"
 date: "2026-07-26"
-readTime: "7 min"
+readTime: "5 min"
 category: "Computing"
-excerpt: "Terry Davis built a single compiler that did both ahead-of-time and just-in-time compilation, and made it the way you talked to the whole operating system. Almost nothing today matches that."
+excerpt: "Compiler that runs both ahead-of-time and just-in-time, and is also the shell you use to operate the system."
 featured: false
+coverArt: "../../img/blog/holyc.png"
 ---
 
 There is a design idea buried in TempleOS that is more interesting than the tragic myth that usually surrounds it, and it is worth pulling out on its own terms. Terry Davis built the HolyC compiler so that it could compile ahead of time and just in time, from a single unified compiler, and then he made that compiler the thing you used to operate the entire system. When you understand what that actually means, most modern languages look clumsy by comparison.

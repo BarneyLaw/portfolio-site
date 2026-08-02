@@ -1,0 +1,185 @@
+---
+// Pixel-art packet mascot, drawn as SVG so it stays sharp at any size or
+// display scale. Each pixel map is compiled at build time into run-length
+// merged <rect>s (one rect per horizontal run of same-colored pixels), so a
+// facing ships as a few dozen nodes and zero JS.
+//
+// Both facings render stacked in the same viewBox; a CSS animation shows the
+// right-facing group on the outbound leg of the caller's patrol and the
+// left-facing one on the return leg. The cycle length comes from --pc-leg (set
+// by Nav, the element that owns the patrol), so the two can never drift apart.
+interface Props {
+  /**
+   * Size of one sprite pixel. Sets the --packet-px custom property, which
+   * drives the rendered width — callers can override it (including with
+   * relative units like em/vw) to rescale the sprite from CSS.
+   */
+  px?: number;
+  class?: string;
+}
+const { px = 3, class: className } = Astro.props;
+
+const MAP_LEFT = [
+  "...OOOOOOOOOOO...",
+  ".OOOBBBBBBBBBOOO.",
+  "OOBBBBBBBBBBBBBOO",
+  "OBOOBBBBBBBBBOOBO",
+  "OBBBOOBBBBBOOBBBO",
+  "OBBBBBOOBOOBBBBBO",
+  "OBBBWWBBOBBWWBBBO",
+  "OBBWWWBBBBWWWBBBO",
+  "OBBbWWBBBBbWWBBBO",
+  "OBBWWWBBBBWWWBBBO",
+  "OOOBBBBBBBBBBBOOO",
+  "..OOOOOOOOOOOOO..",
+];
+
+const MAP_RIGHT = [
+  "...OOOOOOOOOOO...",
+  ".OOOBBBBBBBBBOOO.",
+  "OOBBBBBBBBBBBBBOO",
+  "OBOOBBBBBBBBBOOBO",
+  "OBBBOOBBBBBOOBBBO",
+  "OBBBBBOOBOOBBBBBO",
+  "OBBBWWBBOBBWWBBBO",
+  "OBBBWWWBBBBWWWBBO",
+  "OBBBWWbBBBBWWbBBO",
+  "OBBBWWWBBBBWWWBBO",
+  "OOOBBBBBBBBBBBOOO",
+  "..OOOOOOOOOOOOO..",
+];
+
+const COLORS: Record<string, string> = {
+  b: "#00b73f", // eye-blue
+  O: "#0d1220", // outline
+  B: "#2563eb", // body blue
+  L: "#7ab0ff", // envelope-flap highlight
+  W: "#ffffff", // eye white
+  P: "#0d1220", // pupil
+  S: "#9fc1ff", // eye shine
+  K: "#ff9db0", // blush
+};
+
+// Collapse each row into horizontal runs of one color. Runs are merged by
+// resolved color rather than by map character, so two characters that share a
+// hex (outline and pupil) still fold into one rect.
+type Run = { x: number; y: number; w: number; fill: string };
+const toRuns = (map: string[]): Run[] => {
+  const runs: Run[] = [];
+  map.forEach((row, y) => {
+    let x = 0;
+    while (x < row.length) {
+      const fill = COLORS[row[x]];
+      if (!fill) {
+        x += 1;
+        continue;
+      }
+      let w = 1;
+      while (x + w < row.length && COLORS[row[x + w]] === fill) w += 1;
+      runs.push({ x, y, w, fill });
+      x += w;
+    }
+  });
+  return runs;
+};
+
+const cols = MAP_RIGHT[0].length;
+const rows = MAP_RIGHT.length;
+const runsRight = toRuns(MAP_RIGHT);
+const runsLeft = toRuns(MAP_LEFT);
+---
+
+<svg
+  class:list={["packet-sprite", className]}
+  style={`--packet-px:${px}px;--packet-cols:${cols}`}
+  viewBox={`0 0 ${cols} ${rows}`}
+  shape-rendering="crispEdges"
+  aria-hidden="true"
+  focusable="false"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <g class="packet-facing-right">
+    {
+      runsRight.map((r) => (
+        <rect x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} />
+      ))
+    }
+  </g>
+  <g class="packet-facing-left">
+    {
+      runsLeft.map((r) => (
+        <rect x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} />
+      ))
+    }
+  </g>
+</svg>
+
+<style>
+  /* The viewBox supplies the aspect ratio, so only the width needs setting;
+     one sprite pixel is --packet-px wide at any resolution. */
+  .packet-sprite {
+    display: block;
+    width: calc(var(--packet-cols) * var(--packet-px));
+    height: auto;
+    /* The bob lifts the sprite by exactly one sprite pixel. */
+    --bob: calc(var(--packet-px) * -1);
+    animation: packet-bob 0.4s steps(2, jump-none) infinite;
+  }
+
+  /* One facing flip per full there-and-back patrol — steps(2, jump-none) holds
+     the from-value for the outbound leg and the to-value for the return, so
+     exactly one facing is opaque at any moment. */
+  .packet-facing-right {
+    opacity: 1;
+    animation: packet-face-right calc(var(--pc-leg, 4.5s) * 2) steps(2, jump-none)
+      infinite;
+  }
+  .packet-facing-left {
+    opacity: 0;
+    animation: packet-face-left calc(var(--pc-leg, 4.5s) * 2) steps(2, jump-none)
+      infinite;
+  }
+
+  /* Freeze the bob and the facing when an ancestor (the nav's pause button)
+     is paused, so the mascot stops looking where it stopped. */
+  :global(.is-paused) .packet-sprite,
+  :global(.is-paused) .packet-facing-right,
+  :global(.is-paused) .packet-facing-left {
+    animation-play-state: paused;
+  }
+
+  @keyframes packet-bob {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(var(--bob));
+    }
+  }
+  @keyframes packet-face-right {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes packet-face-left {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* No patrol under reduced motion, so there is no direction to track: hold
+     the right-facing frame (the opacity base values above). */
+  @media (prefers-reduced-motion: reduce) {
+    .packet-sprite,
+    .packet-facing-right,
+    .packet-facing-left {
+      animation: none;
+    }
+  }
+</style>
