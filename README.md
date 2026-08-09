@@ -21,3 +21,5 @@ npm run check      # type-check + validate content
 See **[DEVELOPMENT.md](./DEVELOPMENT.md)** for the full developer guide:
 architecture, a component-by-component reference, how to author content, the
 styling/theming model, the Go+DB backend seam, and the cleanup/iteration backlog.
+
+Test for CI check
