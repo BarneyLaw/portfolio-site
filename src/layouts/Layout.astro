@@ -29,15 +29,12 @@ const {
         margin: 0;
       }
     </style>
-    {/* Apply the saved theme before paint to avoid a flash of the wrong mode. */}
+    {/* Apply the saved theme before paint to avoid a flash of the wrong mode.
+        Light is the default: only an explicit saved choice turns dark on. */}
     <script is:inline>
       (function () {
         try {
-          var t = localStorage.getItem("theme");
-          if (
-            t === "dark" ||
-            (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)
-          ) {
+          if (localStorage.getItem("theme") === "dark") {
             document.documentElement.classList.add("dark");
           }
         } catch (e) {}
