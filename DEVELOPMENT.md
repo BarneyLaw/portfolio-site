@@ -6,9 +6,9 @@ A personal site (blog · reviews · portfolio · project showcase) built to ship
 - **Framework:** [Astro](https://astro.build) 7 (static output)
 - **Styling:** Tailwind CSS v4 (via `@tailwindcss/vite`) + CSS custom properties
 - **Content:** Astro content collections — one MDX file per entry (frontmatter + prose)
-- **Client JS:** none from a framework. The only JS is a few hundred bytes of
-  hand-written vanilla script, inlined per page (dark-mode toggle, sprite
-  animation, list filters).
+- **Client JS:** none from a framework. A few hundred bytes of hand-written
+  vanilla script per page (theme toggle, list filters, nav mascot, copy-code),
+  all progressive enhancement.
 - **Backend:** none today. A Go + database backend can be added later through a
   deliberate seam (see [Backend seam](#backend-seam-go--db)).
 
@@ -25,29 +25,77 @@ npm run dev          # dev server at http://localhost:4321
 npm run build        # static build to ./dist
 npm run preview      # serve the built ./dist
 npm run check        # astro check — type-checks .astro + .ts, validates content
+npm test             # smoke + accessibility tests (needs a build first)
 ```
 
-Node 18+ recommended. There is no test suite yet (see [Iteration ideas](#iteration-ideas)).
+Node 18+ recommended. `npm test` asserts on `dist/`, so run `npm run build`
+first — CI does. The full gate is `npm run check && npm run build && npm test`.
+
+### Environment variables
+
+Both are optional; both are baked in at **build** time and end up in public
+output, so neither may ever hold a secret.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `PUBLIC_SITE_ORIGIN` | `https://packetcraft.dev` | Origin used for canonical tags, the RSS feed and the sitemap. Validated during build: must be a bare `https` origin (or `localhost`) with no path. |
+| `PUBLIC_API_BASE_URL` | `/api` in the container, unset locally | Base for the future Go backend. See [Backend seam](#backend-seam-go--db). |
+
+### Generated assets
+
+Two committed artifacts are produced by hand-run scripts, not by the build:
+
+```bash
+node scripts/pixelize.mjs [src.png] [out.json] [cols]   # sprite → palette+RLE JSON
+node scripts/make-og-card.mjs                           # → public/og-default.png
+```
 
 ---
 
 ## Rendering model (read this first)
 
 Everything is **statically rendered at build time** to plain HTML. There are
-**no Astro islands** and **no framework runtime** shipped to the browser —
-`dist/_astro/` contains only CSS and the sprite PNGs, no JS bundles.
+**no Astro islands** and **no framework runtime** shipped to the browser.
 
-Interactivity is achieved with small `<script>` blocks that Astro inlines into
-the page HTML:
+Interactivity is a handful of small hand-written scripts. Astro inlines most of
+them into the page as minified `<script type="module">` blocks; only the theme
+bootstrap is `is:inline` (it has to run before first paint).
 
 | Feature | Where | What it does |
 |---|---|---|
-| Dark-mode toggle + no-flash init | `src/layouts/Layout.astro` | Toggles `.dark` on `<html>`, persists to `localStorage`; an inline head script applies the saved theme before first paint |
-| Walking sprite loader | `src/components/astro/Sprite.astro` | Cycles 25 PNG frames via `setInterval` |
-| Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling the `hidden` class |
+| Theme bootstrap | `src/layouts/Layout.astro` `<head>` | `is:inline`; applies the saved theme before paint so there is no flash |
+| Theme toggle | `src/layouts/Layout.astro` | Flips `.dark`, persists to `localStorage`, keeps `aria-pressed` in sync |
+| Nav mascot pause | `src/components/astro/Nav.astro` | Parks the walking packet; persisted, and skipped under `prefers-reduced-motion` |
+| Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling `hidden`; unfiltered without JS |
+| Copy-code buttons | `src/components/astro/CodeCopy.astro` | Injects a copy button into each `.mdx-content pre`; nothing renders without JS |
 
-That's the complete client-side JS inventory. If you find yourself reaching for
-a framework or a heavy dependency, re-read [Guiding principles](#guiding-principles).
+That's the complete client-side JS inventory. Everything else — pagination,
+the table of contents, syntax highlighting, filtering's default state — is
+static HTML. If you find yourself reaching for a framework or a heavy
+dependency, re-read [Guiding principles](#guiding-principles).
+
+### Content rules live in one place
+
+`src/lib/content.ts` documents the whole publication contract as four numbered
+rules: what counts as published (`draft`, future dates), that unpublished
+entries are absent from **everything** including `getStaticPaths`, that
+ordering is total and never depends on file order, and how the featured post is
+chosen. Change publication behaviour there, not in a page.
+
+## Testing
+
+One command, three suites, all asserting on the real `dist/` output:
+
+| Suite | Covers |
+|---|---|
+| `test/build-output.test.mjs` | Routes emitted, drafts withheld, internal links, external `rel` safety, RSS/sitemap/canonical agreement, social cards, image dimensions, archive paging, heading anchors, print rules, theme persistence, filter/data agreement |
+| `test/accessibility.test.mjs` | Heading structure, landmarks, skip link, unique ids, accessible names, colour-independence, control state, zoom — see [Accessibility](#accessibility) |
+| `test/served-site.test.mjs` | HTTP behaviour: clean URLs, 404s, MIME types, cache policy |
+
+There is no browser and no browser dependency. `test/served-site.test.mjs`
+re-implements the `try_files` rule from `nginx.conf` over `node:http`; the
+`container` job in CI runs the same probes against the real image, which is
+what actually validates the nginx config.
 
 ---
 
@@ -60,10 +108,12 @@ portfolio-site/
 ├── package.json              # astro + @astrojs/mdx (deps); tailwind, typescript, checks (dev)
 ├── src/
 │   ├── pages/                # ROUTES (file-based). Each .astro file = one URL.
-│   │   ├── index.astro       #   /            Home (static, curated feed)
+│   │   ├── index.astro       #   /            Home (feed built from collections)
 │   │   ├── about.astro       #   /about       About (static)
-│   │   ├── blog.astro        #   /blog        Blog index (from collection)
+│   │   ├── blog.astro        #   /blog        Blog index — page 1 of the archive
 │   │   ├── blog/[slug].astro #   /blog/:slug  Blog post (renders MDX body)
+│   │   ├── blog/page/[page].astro # /blog/page/:n  Archive pages 2..N
+│   │   ├── rss.xml.ts        #   /rss.xml     Feed of published posts
 │   │   ├── reviews/
 │   │   │   ├── index.astro   #   /reviews     Reviews list (filterable)
 │   │   │   └── [id].astro    #   /reviews/:id Review detail (renders MDX body)
@@ -71,10 +121,15 @@ portfolio-site/
 │   │       ├── index.astro   #   /projects    Projects grid (filterable)
 │   │       └── [id].astro    #   /projects/:id Project detail (renders MDX body)
 │   ├── layouts/
-│   │   └── Layout.astro       # HTML shell: <head>, Nav, <slot/>, Footer, dark-mode scripts
+│   │   └── Layout.astro       # HTML shell + the page metadata contract (title,
+│   │                          #   description, canonical, Open Graph), Nav, Footer
 │   ├── components/astro/      # Presentational .astro components (no client JS unless noted)
-│   │   ├── Nav.astro          #   Sticky header: logo, nav links (active by URL), theme toggle button
-│   │   ├── Footer.astro       #   Footer: links, uptime line (hardcoded), Ruri pixel sprite
+│   │   ├── Nav.astro          #   ⚠ inline JS: sticky header, active link, theme + mascot buttons
+│   │   ├── Footer.astro       #   Footer: links from src/lib/site.ts, build date, Ruri sprite
+│   │   ├── Pagination.astro   #   Prev/next/numbered links; renders nothing on a 1-page list
+│   │   ├── PostList.astro     #   The blog list rows, shared by /blog and /blog/page/:n
+│   │   ├── TableOfContents.astro # <details> contents built from render()'s headings
+│   │   ├── CodeCopy.astro     #   ⚠ inline JS: injects copy buttons into .mdx-content pre
 │   │   ├── Cursor.astro        #   Blinking terminal cursor
 │   │   ├── Hatch.astro        #   Hatched placeholder box (stands in for images)
 │   │   ├── Tag.astro          #   Small pill/tag (accepts a slot)
@@ -91,19 +146,30 @@ portfolio-site/
 │   │   └── reviews/*.mdx       #   Reviews: frontmatter (verdict/type) + prose body
 │   ├── content.config.ts       # Collection definitions + zod schemas
 │   ├── lib/
-│   │   ├── content.ts          # ★ Content access layer — the seam to a future backend
+│   │   ├── content.ts          # ★ Content access layer + the publication rules
+│   │   ├── site.ts             # ★ Identity, origin, nav/footer/profile links, contact
+│   │   ├── pagination.ts       #   paginate() + blog page size and paths
+│   │   ├── rehype-heading-anchors.mjs # Wraps MDX headings in a link to their own id
 │   │   └── api.ts              # ★ Go backend seam (not wired) + PUBLIC_API_BASE_URL
 │   ├── styles/
-│   │   ├── index.css           # Entry: imports the four below
+│   │   ├── index.css           # Entry: imports the five below
 │   │   ├── fonts.css           # IBM Plex Mono @import + @keyframes blink / scan
 │   │   ├── tailwind.css        # Tailwind import + @source content globs  ⚠ see gotcha
-│   │   ├── theme.css           # CSS variables (light + .dark), Tailwind @theme mapping
-│   │   ├── content.css          # .mdx-content styles for rendered MDX bodies
+│   │   ├── theme.css           # CSS variables (light + .dark), focus ring, reduced motion
+│   │   ├── content.css          # .mdx-content styles, heading anchors, Shiki dual theme
+│   │   ├── print.css            # @media print — hides [data-print="hide"] chrome
 │   │   └── globals.css          # empty, unused (Figma leftover — removable)
 │   ├── img/                    # Sprite art (darjeeling.png + 25 walk frames)
 │   └── vite-env.d.ts           # vite/client types (import.meta.glob)
+├── public/
+│   └── og-default.png          # Generated social card (scripts/make-og-card.mjs)
 ├── scripts/
-│   └── pixelize.mjs            # PNG → palette+RLE sprite JSON (run by hand)
+│   ├── pixelize.mjs            # PNG → palette+RLE sprite JSON (run by hand)
+│   └── make-og-card.mjs        # → public/og-default.png (run by hand)
+└── test/
+    ├── build-output.test.mjs   # Assertions over dist/
+    ├── accessibility.test.mjs  # Structural a11y checks over dist/
+    └── served-site.test.mjs    # HTTP behaviour (mirrors the nginx try_files rule)
 ```
 
 `★` = the two files that matter most for future backend work.
@@ -168,13 +234,18 @@ Every page reads content **through this module**, never by calling
 `getCollection` directly:
 
 ```ts
-getProjects()            // sorted by frontmatter `order`
+getProjects()            // published, by `order` then id
 getProject(id)
-getBlogPosts()           // sorted by date desc
+getBlogPosts()           // published, newest first then id
 getBlogPost(id)
-getReviews()             // sorted by date desc
+getFeaturedPost()        // the featured rule, in one place
+getReviews()             // published, newest first then id
 getReview(id)
+socialImageOf(entry)     // coverArt ?? image, for the social card
 ```
+
+Every list here already applies the publication rules, so a draft or a
+future-dated entry cannot leak into a page, a feed, or the sitemap.
 
 This indirection is the whole point: when a backend arrives, you change the
 *bodies* of these functions to fetch from Go and **nothing else changes** —
@@ -200,18 +271,29 @@ Create `src/content/blog/my-post.mdx`. The filename becomes the URL slug
 ```mdx
 ---
 title: "Post title"
-date: "2026-07-01"        # string; drives sort order (desc)
+date: "2026-07-01"        # YYYY-MM-DD, validated. A future date withholds the post.
 readTime: "6 min"
 category: "homelab"
-excerpt: "One-line summary shown in the list."
-featured: false           # at most one true → becomes the hero card
+excerpt: "One-line summary shown in the list and in the feed."
+featured: false           # nominates it for the hero card; newest flagged post wins
+draft: false              # true → no list entry, no page, no feed, no sitemap
+coverArt: "../../img/blog/thing.png"   # optional, decorative — see Images below
+coverArtAlt: "…"          # only if the art carries meaning the headline doesn't
 ---
 
 Markdown / MDX body. Renders on the detail page inside `.mdx-content`.
 
 ## A heading
-Prose, `inline code`, lists, etc.
+Every `##` gets a stable id and a permalink anchor. Four or more of them turns
+on the collapsible table of contents.
+
+```go
+// Fenced code is highlighted at build time, in both light and dark themes.
 ```
+```
+
+Start the body at `##`. A `#` would compete with the page's own `<h1>`, and
+`test/accessibility.test.mjs` fails the build for two h1s on a page.
 
 ### Add a project
 Create `src/content/projects/my-project.mdx`. Filename = `/projects/:id`.
@@ -227,10 +309,37 @@ description: "Card blurb (also used as the page meta description)."
 codeSnippet: |-
   $ some command
   ▸ output line
+draft: false
+links:                    # optional; the sidebar block is omitted when empty
+  - label: "github"
+    href: "https://github.com/you/repo"   # must be an absolute http(s) URL
+image: "../../img/project/shot.png"       # meaningful screenshot
+imageAlt: "Screenshot of …"               # required when `image` is set
 ---
 
 The writeup body (rendered on the detail page).
 ```
+
+### Images
+
+Two slots, two different jobs:
+
+| Field | Role | Alt text |
+|---|---|---|
+| `image` | A **meaningful** preview — screenshot, product photo. Shown on list/grid cards. | `imageAlt`, describe it properly |
+| `coverArt` | **Decorative** artwork for the wide feature cards on Home. | `alt=""` by default; set `coverArtAlt` only to override |
+
+Both go through Astro's asset pipeline, so intrinsic `width`/`height` are known
+at build time and every image reserves its box before it loads — do not add
+manual `width`/`height` props, they were removed because they did not match the
+files' real aspect ratios.
+
+The social card prefers `coverArt`, then `image`, then `public/og-default.png`.
+
+`sharp` optimization is **off** (`image.service: noop` in `astro.config.mjs`):
+source assets are expected to be pre-sized. Animated or video content is not
+used anywhere yet; if it is added it needs a poster frame and must not autoplay
+with sound.
 
 ### Add a review
 Create `src/content/reviews/thing-slug.mdx`. Filename = `/reviews/:id`.
@@ -342,10 +451,14 @@ The site is fully static and needs no backend. The hooks for adding one later:
 
 - **`src/lib/api.ts`** — `API_BASE` (from `PUBLIC_API_BASE_URL`) and
   `apiConfigured()`. Documents the intended pattern and a commented example.
-- **`.env.example`** — copy to `.env` and set `PUBLIC_API_BASE_URL` to enable.
+- **`.env`** — set `PUBLIC_API_BASE_URL` to enable. There is no committed
+  `.env.example`: `.gitignore` matches `*.env*`. See the environment variable
+  table in [Quick start](#quick-start).
 - **UI markers** — `{/* gap: ... */}` comments mark the spots meant to become
-  dynamic: footer uptime/build number, blog view counts/comments, project
-  demo/status.
+  dynamic: blog view counts/comments, project demo/status. Footer uptime is
+  one of these too — the fabricated "uptime 99.4% · build #1284" string was
+  removed and replaced with a real build date, so there is nothing misleading
+  sitting there while the backend does not exist.
 
 **Intended pattern: HTMX.** Go returns HTML *fragments*, swapped into the page —
 so most dynamic features stay serverside with little/no client JS, consistent
@@ -387,26 +500,42 @@ end-to-end.
 - `README.md` — was Figma boilerplate; now points here.
 
 **Functional gaps / rough edges:**
-- Blog pagination buttons are decorative (no real paging).
-- Home "featured" and "recent" feeds are hardcoded, not derived from collections.
-- Footer `uptime … · build #…` is a hardcoded string.
 - Nav/Footer logo markup is duplicated between the two components.
-- External links (`github ↗`, `email ↗`, `rss ↗`) are placeholder text, not real `href`s.
-- Placeholder `Hatch` boxes stand in for all imagery; no real images/OG tags yet.
-- `date` fields are plain strings (sortable but not validated as dates).
+- `Hatch` placeholders still stand in wherever an entry declares no imagery.
+- No content uses fenced code yet, so syntax highlighting is configured and
+  tested but not visible on the live site.
+- Category and read-time labels are plain text: there are no category archive
+  routes to link them to (Milestone 5).
+- Footer uptime is gone rather than live; a real value needs the backend
+  (FEAT-204).
+
+**Gotchas worth knowing:**
+- **The content store is cached outside the project.** Astro persists it to
+  `node_modules/.astro/data-store.json`. Deleting or renaming a content file
+  can leave a stale entry that makes the build fail with
+  `UnknownContentCollectionError`. Clearing `node_modules/.astro` fixes it —
+  `rm -rf .astro dist` alone does not.
+- **`.env.example` does not exist** despite older references to it; `.gitignore`
+  matches `*.env*`, so it could not be committed anyway. Use the environment
+  variable table in [Quick start](#quick-start) instead.
+- **Custom rehype plugins run before Astro's**, so heading ids do not exist yet
+  when they run. `astro.config.mjs` runs Astro's `rehypeHeadingIds` explicitly
+  first — see the comment there before adding another plugin.
+- **Astro serialises `alt=""` as a bare `alt`.** Tests matching on `alt="` will
+  miss decorative images.
 
 ## Iteration ideas
 
-- **Wire real content into Home** — pull latest posts/featured from the
-  collections so the landing page updates itself.
-- **RSS + sitemap** — `@astrojs/rss` and `@astrojs/sitemap` are natural, low-JS additions for a blog.
-- **Real images** — replace `Hatch` placeholders; reconsider the `noop` image
-  service if you want Astro's `<Image>` optimization (adds `sharp`).
-- **Reading niceties** — heading anchor links, a table of contents, code-block
-  syntax highlighting (Astro/Shiki is built in for fenced code).
-- **Tags/categories** — index pages per category using collection queries.
-- **Tests** — a couple of Playwright smoke tests (routes return 200, filters
-  hide/show, dark toggle persists) would lock in the "zero-JS-but-still-works" guarantee.
+- **Tags/categories** — archive routes per category, which would also let the
+  category labels on posts become links.
+- **Search** — across published posts and projects (Milestone 5).
+- **Real browser tests** — the suite is deliberately browser-free. Playwright
+  would add genuine focus-order, contrast and screen-reader-adjacent coverage
+  that the structural checks cannot reach, at the cost of a large dependency
+  and slower CI.
+- **Image optimization** — the `noop` image service is still on. Turning it off
+  would let Astro emit resized/modern formats via `sharp`, which is already a
+  dependency.
 - **The Go backend** — implement the `src/lib/api.ts` endpoints as HTMX fragments.
 
 ---
