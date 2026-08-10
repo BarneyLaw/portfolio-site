@@ -54,9 +54,7 @@ const BTN_INACTIVE =
               review.data.image ? (
                 <Image
                   src={review.data.image}
-                  alt={review.data.imageAlt ?? `${review.data.name} preview`}
-                  width={64}
-                  height={64}
+                  alt={review.data.imageAlt ?? `${review.data.name}`}
                   class="w-16 h-16 flex-none rounded object-cover"
                 />
               ) : (

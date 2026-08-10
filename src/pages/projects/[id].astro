@@ -4,7 +4,7 @@ import Layout from "../../layouts/Layout.astro";
 import StatusBadge from "../../components/astro/StatusBadge.astro";
 import Tag from "../../components/astro/Tag.astro";
 import TerminalSnippet from "../../components/astro/TerminalSnippet.astro";
-import { getProjects } from "../../lib/content";
+import { getProjects, socialImageOf } from "../../lib/content";
 import { externalLinkAttrs } from "../../lib/site";
 
 export async function getStaticPaths() {
@@ -20,7 +20,7 @@ const p = project.data;
 const { Content } = await render(project);
 ---
 
-<Layout title={p.name} description={p.description}>
+<Layout title={p.name} description={p.description} image={socialImageOf(project)}>
   <main class="max-w-5xl mx-auto px-6 py-12">
     <a
       href="/projects"

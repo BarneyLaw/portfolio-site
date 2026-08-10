@@ -46,13 +46,15 @@ const BTN_INACTIVE =
             data-status={p.status}
             class="block bg-card border border-border rounded overflow-hidden text-left hover:border-primary/50 transition-colors group"
           >
+            {/* The screenshot is meaningful — the card text never describes it
+                — so it keeps real alt text. No width/height override: Astro
+                emits the intrinsic size, giving the browser the true aspect
+                ratio while the CSS box (h-32 w-full) fixes rendered height. */}
             {
               p.image ? (
                 <Image
                   src={p.image}
-                  alt={p.imageAlt ?? `${p.name} project preview`}
-                  width={800}
-                  height={300}
+                  alt={p.imageAlt ?? `Screenshot of ${p.name}`}
                   class="h-32 w-full object-cover"
                 />
               ) : (

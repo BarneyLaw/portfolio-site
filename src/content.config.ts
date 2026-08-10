@@ -1,4 +1,4 @@
-import { defineCollection } from "astro:content";
+import { defineCollection, type SchemaContext } from "astro:content";
 import { z } from "astro/zod";
 import { glob } from "astro/loaders";
 
@@ -17,9 +17,33 @@ const isoDate = z
     See the publication rules in src/lib/content.ts. */
 const draft = z.boolean().default(false);
 
+/**
+ * Media fields, shared by all three collections. The two image slots had
+ * overlapping names and a single shared alt string; these are their roles:
+ *
+ *   image        A *meaningful* preview — a screenshot, a product photo. Shown
+ *                in list and grid cards. Describe it in `imageAlt`.
+ *   coverArt     *Decorative* artwork for the wide feature cards on the home
+ *                page. The card's own headline already carries the meaning, so
+ *                this renders with alt="" unless `coverArtAlt` overrides it.
+ *   *Alt         Alternative text for the slot of the same name.
+ *
+ * Social cards prefer coverArt, then image, then the site default — see
+ * socialImageOf() in src/lib/content.ts.
+ *
+ * Both are processed by Astro's asset pipeline, so intrinsic width/height are
+ * known at build time and every <Image> reserves its box before it loads.
+ */
+const media = ({ image }: SchemaContext) => ({
+  image: image().optional(),
+  imageAlt: z.string().optional(),
+  coverArt: image().optional(),
+  coverArtAlt: z.string().optional(),
+});
+
 const blog = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/blog" }),
-  schema: ({ image }) =>
+  schema: (ctx) =>
     z.object({
       title: z.string(),
       date: isoDate,
@@ -28,15 +52,13 @@ const blog = defineCollection({
       excerpt: z.string(),
       featured: z.boolean().default(false),
       draft,
-      image: image().optional(),
-      coverArt: image().optional(),
-      imageAlt: z.string().optional(),
+      ...media(ctx),
     }),
 });
 
 const projects = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/projects" }),
-  schema: ({ image }) =>
+  schema: (ctx) =>
     z.object({
       name: z.string(),
       status: z.enum(["SHIPPED", "BUILDING", "PLANNED"]),
@@ -60,15 +82,13 @@ const projects = defineCollection({
           }),
         )
         .default([]),
-      image: image().optional(),
-      coverArt: image().optional(),
-      imageAlt: z.string().optional(),
+      ...media(ctx),
     }),
 });
 
 const reviews = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/reviews" }),
-  schema: ({ image }) =>
+  schema: (ctx) =>
     z.object({
       type: z.enum(["HARDWARE", "SOFTWARE"]),
       verdict: z.enum(["RECOMMENDED", "MIXED", "PASS"]),
@@ -76,9 +96,7 @@ const reviews = defineCollection({
       date: isoDate,
       excerpt: z.string(),
       draft,
-      image: image().optional(),
-      coverArt: image().optional(),
-      imageAlt: z.string().optional(),
+      ...media(ctx),
     }),
 });
 

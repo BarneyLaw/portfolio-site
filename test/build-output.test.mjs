@@ -279,6 +279,73 @@ test("every page advertises the feed", () => {
   }
 });
 
+test("every page renders a complete social card", () => {
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, "utf8");
+    const meta = (property) =>
+      html.match(new RegExp(`<meta property="${property}" content="([^"]*)"`))?.[1];
+
+    for (const required of ["og:type", "og:title", "og:description", "og:url"]) {
+      assert.ok(meta(required), `${routeOf(file)} is missing ${required}`);
+    }
+    // Scrapers do not run JavaScript and do not resolve relative URLs.
+    const image = meta("og:image");
+    assert.match(image ?? "", /^https:\/\//, `${routeOf(file)} og:image is not absolute`);
+    assert.ok(
+      meta("og:image:width") && meta("og:image:height"),
+      `${routeOf(file)} og:image has no declared size`,
+    );
+    assert.ok(meta("og:image:alt"), `${routeOf(file)} og:image has no alt text`);
+    // og:url must agree with the canonical, or a share and a crawl disagree
+    // about which URL this page is.
+    assert.equal(
+      meta("og:url"),
+      html.match(/<link rel="canonical" href="([^"]+)"/)?.[1],
+      `${routeOf(file)} og:url and canonical disagree`,
+    );
+  }
+});
+
+test("social card images actually exist and match their declared size", async () => {
+  const { default: sharp } = await import("sharp");
+  const seen = new Set();
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, "utf8");
+    const url = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1];
+    const w = Number(html.match(/<meta property="og:image:width" content="(\d+)"/)?.[1]);
+    const h = Number(html.match(/<meta property="og:image:height" content="(\d+)"/)?.[1]);
+    const path = new URL(url).pathname;
+    if (seen.has(path)) continue;
+    seen.add(path);
+
+    const onDisk = join(dist, path);
+    assert.ok(existsSync(onDisk), `og:image ${path} was not emitted into dist/`);
+    const meta = await sharp(onDisk).metadata();
+    assert.equal(meta.width, w, `og:image ${path} width tag disagrees with the file`);
+    assert.equal(meta.height, h, `og:image ${path} height tag disagrees with the file`);
+  }
+});
+
+test("content images reserve their space before loading", () => {
+  // Missing intrinsic dimensions is the classic cause of layout shift: the
+  // browser cannot size the box until the bytes arrive.
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, "utf8");
+    for (const [tag] of html.matchAll(/<img\s[^>]*>/g)) {
+      const src = tag.match(/src="([^"]*)"/)?.[1] ?? "?";
+      assert.match(tag, /\swidth="\d+"/, `${routeOf(file)}: <img ${src}> has no width`);
+      assert.match(tag, /\sheight="\d+"/, `${routeOf(file)}: <img ${src}> has no height`);
+      // alt must be present; empty is allowed and means "decorative". Astro
+      // serialises alt="" as a bare `alt`, so both spellings count.
+      assert.match(
+        tag,
+        /\salt(=|\s|>)/,
+        `${routeOf(file)}: <img ${src}> has no alt attribute`,
+      );
+    }
+  }
+});
+
 test("ships a non-empty stylesheet", () => {
   const home = readFileSync(join(dist, "index.html"), "utf8");
   const sheets = [...home.matchAll(/href="(\/[^"]+\.css)"/g)].map((m) => m[1]);
