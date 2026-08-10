@@ -25,11 +25,21 @@ const BTN_INACTIVE =
   <main class="max-w-5xl mx-auto px-6 py-12">
     <h1 class="font-bold font-mono text-[32px] text-foreground mb-5">projects</h1>
 
-    <div class="flex gap-2 mb-8" id="project-filters">
+    {/* Filtering is an enhancement: with JavaScript off these buttons do
+        nothing and every project stays visible, which is the useful default.
+        aria-pressed carries the current selection to assistive tech. */}
+    <div
+      class="flex gap-2 mb-8 flex-wrap"
+      id="project-filters"
+      role="group"
+      aria-label="Filter projects by status"
+    >
       {
         filters.map((f) => (
           <button
+            type="button"
             data-filter={f.id}
+            aria-pressed={f.id === "all" ? "true" : "false"}
             class:list={[BTN_BASE, f.id === "all" ? BTN_ACTIVE : BTN_INACTIVE]}
           >
             {f.label}
@@ -38,7 +48,7 @@ const BTN_INACTIVE =
       }
     </div>
 
-    <div class="grid grid-cols-2 gap-4" id="project-grid">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="project-grid">
       {
         projects.map((p) => (
           <a
@@ -97,7 +107,9 @@ const BTN_INACTIVE =
       btn.addEventListener("click", () => {
         const f = btn.dataset.filter;
         for (const b of btns) {
-          b.className = `${BTN_BASE} ${b === btn ? BTN_ACTIVE : BTN_INACTIVE}`;
+          const active = b === btn;
+          b.className = `${BTN_BASE} ${active ? BTN_ACTIVE : BTN_INACTIVE}`;
+          b.setAttribute("aria-pressed", String(active));
         }
         for (const card of cards) {
           const show = f === "all" || card.dataset.status === f;

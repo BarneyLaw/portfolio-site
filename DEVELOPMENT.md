@@ -280,6 +280,62 @@ filter scripts) work only because the class strings appear literally in the
 
 ---
 
+## Accessibility
+
+### What is checked automatically
+
+`test/accessibility.test.mjs` runs over the built HTML on every `npm test`. It
+covers the things that are decidable from markup alone:
+
+- exactly one `<h1>` per page, and no skipped heading levels
+- `lang` on `<html>`, and the banner/main/navigation/contentinfo landmarks
+- a skip link on every page that points at an element that exists
+- unique `id`s
+- an accessible name on every `<button>` and `<a>`
+- no vague link text ("click here", "read more")
+- project status and review verdict present as **text**, not colour alone
+- `aria-pressed` on the theme toggle and both filter groups
+- a viewport meta that does not block pinch zoom
+
+There is no browser in the test suite, so nothing here proves how the page
+actually paints or announces. That is what the checklist below is for.
+
+### Manual checklist
+
+Run this against `npm run preview` when you change navigation, the theme
+toggle, the filters, or any layout. It takes about five minutes.
+
+1. **Keyboard only, no mouse.** From a fresh page load press `Tab`. The first
+   stop must be "Skip to content" and it must become visible. `Enter` on it
+   should jump focus into the page body.
+2. **Focus is always visible.** Keep tabbing through nav, filters, cards,
+   pagination and the footer. Every stop must show a ring. Nothing should be
+   focusable that does not do something.
+3. **Filters work from the keyboard.** On `/projects` and `/reviews`, tab to a
+   filter and press `Enter`/`Space`. The pressed state should move with it.
+4. **Theme toggle.** Activate it from the keyboard; the choice must survive a
+   reload and a navigation to another page.
+5. **No JavaScript.** Disable JS and reload. Every post must still be
+   reachable through `/blog` and `/blog/page/N`, all projects and reviews must
+   be visible (unfiltered), and no control should be present that now does
+   nothing.
+6. **Narrow and wide.** At 320px and at 1440px, no page may scroll sideways.
+7. **Reduced motion.** With the OS "reduce motion" setting on, the nav mascot
+   must be parked and nothing should animate.
+8. **Zoom.** At 200% browser zoom the layout must stay usable.
+
+### Known deviation
+
+`FEATURES.md` FEAT-107 asks that the theme respect system preferences. It
+deliberately does not: light is the default for first-time visitors regardless
+of OS setting, and `test/build-output.test.mjs` asserts that no
+`prefers-color-scheme` fallback comes back. That was an explicit product
+decision (see the commit that made light the default), so it was left alone.
+Reverse it only on purpose, and update that test with it.
+
+`prefers-reduced-motion` **is** honoured, both site-wide in
+`src/styles/theme.css` and specifically for the nav mascot.
+
 ## Backend seam (Go + DB)
 
 The site is fully static and needs no backend. The hooks for adding one later:

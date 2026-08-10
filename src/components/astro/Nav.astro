@@ -10,7 +10,12 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
   data-print="hide"
   class="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm"
 >
-  <nav class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+  {/* The wordmark plus four links plus the toggle cannot fit on one line at
+      phone widths, so below `sm` the bar wraps to two rows and grows to fit.
+      From `sm` up it is the original fixed-height single row. */}
+  <nav
+    class="max-w-5xl mx-auto px-6 py-2 sm:py-0 sm:h-14 flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-4 gap-y-2"
+  >
     <a
       href="/"
       class="flex items-center hover:opacity-80 transition-opacity"
@@ -35,14 +40,14 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
       </button>
     </div>
 
-    <div class="flex items-center gap-5">
+    <div class="flex items-center gap-3 sm:gap-5">
       {
         NAV_LINKS.map((l) => (
           <a
             href={l.href}
             aria-current={isActive(l.href) ? "page" : undefined}
             class:list={[
-              "text-[15px] font-mono transition-colors",
+              "text-[13px] sm:text-[15px] font-mono transition-colors",
               isActive(l.href)
                 ? "text-primary border-b-2 border-primary pb-0.5"
                 : "text-muted-foreground hover:text-foreground",
@@ -52,9 +57,13 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
           </a>
         ))
       }
+      {/* aria-pressed is set by the theme script in Layout.astro, which is the
+          only thing that knows whether the saved theme is dark. */}
       <button
         id="theme-toggle"
-        aria-label="Toggle dark mode"
+        type="button"
+        aria-label="Dark mode"
+        aria-pressed="false"
         class="w-11 h-6 rounded-full relative transition-colors flex-shrink-0 cursor-pointer bg-[#d9d2c2] dark:bg-primary"
       >
         <span

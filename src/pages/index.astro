@@ -72,17 +72,20 @@ const navCards = ["projects", "blog", "reviews"];
 
 <Layout>
   <main class="max-w-5xl mx-auto px-6 py-12">
-    {/* Hero */}
+    {/* Hero. The wordmark is the page's heading, so it is marked up as one
+        rather than as a styled <div> — the home page previously had no h1 at
+        all. The ">" prompt is decoration and is hidden from screen readers so
+        the heading reads as "packetcraft". */}
     <div class="mb-8">
-      <div
-        class="font-bold font-mono text-[50px] text-foreground tracking-tight leading-none"
+      <h1
+        class="font-bold font-mono text-[32px] sm:text-[50px] text-foreground tracking-tight leading-none"
       >
-        <span class="text-primary">&gt;</span> packetcraft
+        <span class="text-primary" aria-hidden="true">&gt;</span> packetcraft
         <Cursor large />
-      </div>
-      <div class="font-mono text-[16px] text-primary mt-3">
+      </h1>
+      <p class="font-mono text-[15px] sm:text-[16px] text-primary mt-3">
         networks · graphics · gaming · systems
-      </div>
+      </p>
     </div>
 
     {/* Terminal whoami */}
@@ -184,7 +187,7 @@ const navCards = ["projects", "blog", "reviews"];
     </div>
 
     {/* Quick nav cards */}
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {
         navCards.map((id) => (
           <a

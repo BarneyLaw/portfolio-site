@@ -44,7 +44,7 @@ const { Content } = await render(review);
     {/* The sidebar floats rather than taking a grid column, so it ends with its
         own content and the writeup reflows into the full width underneath it. */}
     <div>
-      <aside class="float-right w-80 ml-6 mb-4 bg-card border border-border rounded p-4">
+      <aside class="w-full mb-6 md:float-right md:w-80 md:ml-6 md:mb-4 bg-card border border-border rounded p-4">
         <div class="text-[12px] font-mono text-muted-foreground mb-3">verdict</div>
         <VerdictBadge verdict={r.verdict} />
         <div class="mt-5 text-[12px] font-mono text-muted-foreground mb-3">meta</div>

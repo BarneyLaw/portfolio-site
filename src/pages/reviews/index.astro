@@ -29,11 +29,19 @@ const BTN_INACTIVE =
       verdicts only — no stars, no affiliate links
     </p>
 
-    <div class="flex gap-2 mb-8" id="review-filters">
+    {/* Enhancement only: without JavaScript every review stays visible. */}
+    <div
+      class="flex gap-2 mb-8 flex-wrap"
+      id="review-filters"
+      role="group"
+      aria-label="Filter reviews by type"
+    >
       {
         filters.map((f) => (
           <button
+            type="button"
             data-filter={f.id}
+            aria-pressed={f.id === "all" ? "true" : "false"}
             class:list={[BTN_BASE, f.id === "all" ? BTN_ACTIVE : BTN_INACTIVE]}
           >
             {f.label}
@@ -62,8 +70,10 @@ const BTN_INACTIVE =
               )
             }
             <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between gap-3 mb-2.5">
-                <div class="flex items-center gap-2">
+              {/* Wraps on narrow screens: a long review name would otherwise
+                  push the verdict badge off the right edge of a phone. */}
+              <div class="flex items-center justify-between gap-3 mb-2.5 flex-wrap">
+                <div class="flex items-center gap-2 min-w-0 flex-wrap">
                   <Tag muted>{review.data.type}</Tag>
                   <span class="font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors">
                     {review.data.name}
@@ -102,7 +112,9 @@ const BTN_INACTIVE =
       btn.addEventListener("click", () => {
         const f = btn.dataset.filter;
         for (const b of btns) {
-          b.className = `${BTN_BASE} ${b === btn ? BTN_ACTIVE : BTN_INACTIVE}`;
+          const active = b === btn;
+          b.className = `${BTN_BASE} ${active ? BTN_ACTIVE : BTN_INACTIVE}`;
+          b.setAttribute("aria-pressed", String(active));
         }
         for (const row of rows) {
           const show = f === "all" || row.dataset.type === f;
