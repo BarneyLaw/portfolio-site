@@ -1,6 +1,7 @@
 ---
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
+import CodeCopy from "../../components/astro/CodeCopy.astro";
 import VerdictBadge from "../../components/astro/VerdictBadge.astro";
 import { getReviews, socialImageOf } from "../../lib/content";
 
@@ -64,4 +65,6 @@ const { Content } = await render(review);
       <div class="clear-both"></div>
     </div>
   </main>
+
+  <CodeCopy />
 </Layout>

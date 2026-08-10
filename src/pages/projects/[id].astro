@@ -1,6 +1,7 @@
 ---
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
+import CodeCopy from "../../components/astro/CodeCopy.astro";
 import StatusBadge from "../../components/astro/StatusBadge.astro";
 import Tag from "../../components/astro/Tag.astro";
 import TerminalSnippet from "../../components/astro/TerminalSnippet.astro";
@@ -103,4 +104,6 @@ const { Content } = await render(project);
       </div>
     </div>
   </main>
+
+  <CodeCopy />
 </Layout>

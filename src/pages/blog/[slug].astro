@@ -1,6 +1,8 @@
 ---
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
+import CodeCopy from "../../components/astro/CodeCopy.astro";
+import TableOfContents from "../../components/astro/TableOfContents.astro";
 import { getBlogPosts, socialImageOf } from "../../lib/content";
 
 export async function getStaticPaths() {
@@ -9,7 +11,10 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const { Content } = await render(post);
+// `headings` is Astro's own list from the rendered body — the table of
+// contents is built from it rather than from a second pass over the source,
+// so the two can never disagree about what sections exist.
+const { Content, headings } = await render(post);
 ---
 
 <Layout
@@ -34,10 +39,14 @@ const { Content } = await render(post);
       {post.data.title}
     </h1>
 
+    <TableOfContents headings={headings} />
+
     <article class="mdx-content">
       <Content />
     </article>
 
     {/* gap: view counts + comments (Go backend via src/lib/api.ts) go here */}
   </main>
+
+  <CodeCopy />
 </Layout>

@@ -28,11 +28,89 @@
   font-weight: 700;
   color: var(--foreground);
 }
+/* ── Heading anchors ───────────────────────────────────────────────────
+   src/lib/rehype-heading-anchors.mjs wraps each heading's text in a link to
+   its own id. The heading must not look like a link until it is hovered or
+   focused, so the marker is a generated "#" rather than an underline. */
+.mdx-content :is(h2, h3, h4) .heading-anchor {
+  color: inherit;
+  text-decoration: none;
+}
+.mdx-content :is(h2, h3, h4) .heading-anchor::after {
+  content: " #";
+  color: var(--primary);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.mdx-content :is(h2, h3, h4) .heading-anchor:hover::after,
+.mdx-content :is(h2, h3, h4) .heading-anchor:focus-visible::after {
+  opacity: 1;
+}
+/* Anchor jumps land the heading below the sticky header rather than under it. */
+.mdx-content :is(h2, h3, h4, h5, h6)[id] {
+  scroll-margin-top: 4.5rem;
+}
+
+/* ── Code ──────────────────────────────────────────────────────────────
+   Inline code only. The fenced-block rules below deliberately reset this,
+   because Shiki paints its own background and per-token colours. */
 .mdx-content code {
   background: var(--muted);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;
+}
+
+/* Shiki emits .astro-code. A long line must scroll inside the block instead
+   of widening the page — the single most common cause of horizontal overflow
+   on mobile. */
+.mdx-content pre.astro-code {
+  overflow-x: auto;
+  padding: 1rem 1.1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.7;
+  tab-size: 2;
+}
+.mdx-content pre.astro-code code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* Dual-theme Shiki. `defaultColor: false` in astro.config.mjs makes Shiki emit
+   *only* CSS custom properties on each token — no concrete colour at all — so
+   both themes have to be spelled out here. Miss the light block and code
+   silently inherits the prose colour instead of being highlighted. */
+.mdx-content pre.astro-code,
+.mdx-content pre.astro-code span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+.dark .mdx-content pre.astro-code,
+.dark .mdx-content pre.astro-code span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+
+/* Tables and long strings should scroll rather than push the layout wide. */
+.mdx-content :is(table, blockquote) {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.mdx-content blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1rem;
+  color: var(--muted-foreground);
 }
 .mdx-content ul {
   list-style: disc;

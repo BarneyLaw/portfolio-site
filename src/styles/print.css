@@ -1,0 +1,89 @@
+/* Print / "Save as PDF" styles.
+   Goal: the article survives, the furniture does not. Anything that only
+   exists to navigate a live site is noise on paper.
+
+   Elements opt out by carrying data-print="hide", so a component decides for
+   itself rather than this file accumulating a list of selectors to chase. */
+
+@media print {
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Force the light palette: printers do not want a dark background, and most
+     browsers drop background colours on print anyway, which would leave pale
+     text on white paper. */
+  :root,
+  .dark {
+    --background: #ffffff;
+    --foreground: #000000;
+    --card: #ffffff;
+    --card-foreground: #000000;
+    --muted: #f2f2f2;
+    --muted-foreground: #444444;
+    --border: #cccccc;
+    --primary: #000000;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* The floating sidebars on project and review pages become a plain block
+     above the writeup instead of a column the text has to wrap around. */
+  aside {
+    float: none !important;
+    width: auto !important;
+    margin: 0 0 1rem 0 !important;
+    border: 1px solid #ccc !important;
+  }
+
+  /* Reveal where a link actually goes, since the reader cannot click it.
+     Only for real destinations — not in-page anchors or the heading "#"s. */
+  .mdx-content a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+
+  .mdx-content pre.astro-code,
+  .mdx-content pre.astro-code span {
+    /* Undo the dark-theme override so code prints as black on white. */
+    color: #000 !important;
+    background: #f7f7f7 !important;
+  }
+  .mdx-content pre.astro-code {
+    border: 1px solid #ccc !important;
+    white-space: pre-wrap; /* no clipped code at the page edge */
+    word-break: break-word;
+  }
+
+  /* Keep headings attached to the text they introduce. */
+  .mdx-content :is(h2, h3, h4) {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .mdx-content :is(p, li, pre, blockquote) {
+    break-inside: avoid-page;
+  }
+  img {
+    max-width: 100% !important;
+    break-inside: avoid;
+  }
+
+  /* A collapsed table of contents should still print its entries. */
+  details {
+    display: block;
+  }
+  details > *:not(summary) {
+    display: revert !important;
+  }
+}
