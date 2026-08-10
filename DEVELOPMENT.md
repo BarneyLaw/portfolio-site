@@ -208,8 +208,10 @@ dynamic and enumerate their pages with `getStaticPaths()`.
 ### Layout (`src/layouts/Layout.astro`)
 The single HTML shell. Props: `title`, `description`. Responsibilities:
 - `<head>` metadata + global `html,body` reset.
-- **No-flash dark-mode init**: an `is:inline` script that adds `.dark` to
-  `<html>` from `localStorage`/`prefers-color-scheme` *before paint*.
+- **No-flash theme init**: an `is:inline` script that adds `.dark` to `<html>`
+  *before paint*, and only when `localStorage` holds an explicit `"dark"`.
+  It does not look at `prefers-color-scheme` — see
+  [Theme](#theme-light-is-the-default-on-purpose).
 - Renders `<Nav />`, the page `<slot />`, `<Footer />`.
 - **Theme-toggle script**: wires `#theme-toggle` (the button lives in `Nav`) to
   flip `.dark` and persist the choice.
@@ -433,17 +435,20 @@ toggle, the filters, or any layout. It takes about five minutes.
    must be parked and nothing should animate.
 8. **Zoom.** At 200% browser zoom the layout must stay usable.
 
-### Known deviation
+### Theme: light is the default, on purpose
 
-`FEATURES.md` FEAT-107 asks that the theme respect system preferences. It
-deliberately does not: light is the default for first-time visitors regardless
-of OS setting, and `test/build-output.test.mjs` asserts that no
-`prefers-color-scheme` fallback comes back. That was an explicit product
-decision (see the commit that made light the default), so it was left alone.
-Reverse it only on purpose, and update that test with it.
+A first-time visitor gets the light theme no matter what their OS is set to.
+The site does **not** consult `prefers-color-scheme`; only an explicit click on
+the toggle turns dark on, and that choice is what persists.
 
-`prefers-reduced-motion` **is** honoured, both site-wide in
-`src/styles/theme.css` and specifically for the nav mascot.
+This is a product decision, not an oversight, and
+`test/build-output.test.mjs` enforces both halves of it: the pre-paint
+bootstrap must read the saved theme, and no `prefers-color-scheme` fallback may
+reappear. If you ever want OS-driven theming, change the test in the same
+commit — it is there to make the reversal deliberate.
+
+`prefers-reduced-motion` is a different question and **is** honoured, both
+site-wide in `src/styles/theme.css` and specifically for the nav mascot.
 
 ## Backend seam (Go + DB)
 
