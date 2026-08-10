@@ -8,7 +8,7 @@ const [posts, featured] = await Promise.all([getBlogPosts(), getFeaturedPost()])
 const rest = posts.filter((p) => p.id !== featured?.id);
 ---
 
-<Layout title="blog · packetcraft">
+<Layout title="blog">
   <main class="max-w-5xl mx-auto px-6 py-12">
     <h1 class="font-bold font-mono text-[32px] text-foreground mb-3">blog</h1>
     <p class="text-[15px] font-mono text-muted-foreground mb-8">

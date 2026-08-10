@@ -2,16 +2,31 @@
 import "../styles/index.css";
 import Nav from "../components/astro/Nav.astro";
 import Footer from "../components/astro/Footer.astro";
+import { SITE, FEED_PATH, absoluteUrl } from "../lib/site";
 
+// ── Page metadata contract ───────────────────────────────────────────────
+// Every route describes itself through these props and nothing else. Pages
+// pass their own name only; the "· packetcraft" suffix and the canonical URL
+// are composed here so they cannot be spelled differently on different pages.
 interface Props {
+  /** Page name without the site suffix. Omit on the home page. */
   title?: string;
+  /** Falls back to the site description. Keep it one sentence. */
   description?: string;
+  /** Canonical path, defaulting to this page's own URL. Set it only when a
+      route is reachable at more than one path (e.g. paginated archives). */
+  canonicalPath?: string;
 }
 
-const {
-  title = "packetcraft",
-  description = "tinkerer documenting homelab builds, networking experiments, and gaming-adjacent projects.",
-} = Astro.props;
+const { title, description = SITE.description, canonicalPath } = Astro.props;
+
+const pageTitle = title ? `${title} · ${SITE.name}` : SITE.name;
+// Astro's default directory build format means a page's own pathname already
+// carries a trailing slash ("/blog/"). @astrojs/sitemap and @astrojs/rss emit
+// that same form, so using it verbatim keeps canonical, sitemap and feed all
+// advertising one identical URL per page. Don't "tidy" the slash off here —
+// that is exactly what makes them disagree.
+const canonical = absoluteUrl(canonicalPath ?? Astro.url.pathname);
 ---
 
 <!doctype html>
@@ -20,8 +35,16 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/png" href="/favicon.png?v=2" />
-    <title>{title}</title>
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${SITE.name} — blog`}
+      href={absoluteUrl(FEED_PATH)}
+    />
+    <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
+    <title>{pageTitle}</title>
     <style is:global>
       html,
       body {

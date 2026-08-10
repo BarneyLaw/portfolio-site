@@ -12,7 +12,7 @@ const { post } = Astro.props;
 const { Content } = await render(post);
 ---
 
-<Layout title={`${post.data.title} · packetcraft`} description={post.data.excerpt}>
+<Layout title={post.data.title} description={post.data.excerpt}>
   <main class="max-w-5xl mx-auto px-6 py-12">
     <a
       href="/blog"
