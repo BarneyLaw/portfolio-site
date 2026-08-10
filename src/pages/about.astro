@@ -3,6 +3,7 @@ import { Image } from "astro:assets";
 import Layout from "../layouts/Layout.astro";
 import Tag from "../components/astro/Tag.astro";
 import profilePic from "../img/icons/ruri_thumbs_up.png";
+import { ELSEWHERE_LINKS, externalLinkAttrs, isExternal } from "../lib/site";
 
 const stack = [
   "Astro",
@@ -14,7 +15,6 @@ const stack = [
   "NGINX",
   "Ubuntu Server",
 ];
-const links = ["github ↗", "email ↗", "rss ↗"];
 ---
 
 <Layout title="about · packetcraft">
@@ -72,15 +72,27 @@ const links = ["github ↗", "email ↗", "rss ↗"];
       </p>
     </div>
 
-    {/* Links */}
-    <div class="flex gap-5">
+    {/* Links — real destinations from src/lib/site.ts. These were previously
+        <span>s styled to look clickable, which is a dead end for anyone who
+        actually tried to use them. */}
+    <nav class="flex gap-5" aria-label="Elsewhere">
       {
-        links.map((l) => (
-          <span class="text-[15px] font-mono text-muted-foreground hover:text-primary transition-colors cursor-pointer">
-            {l}
-          </span>
+        ELSEWHERE_LINKS.map((l) => (
+          <a
+            href={l.href}
+            class="text-[15px] font-mono text-muted-foreground hover:text-primary transition-colors"
+            {...externalLinkAttrs(l.href)}
+          >
+            {l.label}
+            {isExternal(l.href) && (
+              <>
+                <span aria-hidden="true"> ↗</span>
+                <span class="sr-only"> (opens in a new tab)</span>
+              </>
+            )}
+          </a>
         ))
       }
-    </div>
+    </nav>
   </main>
 </Layout>
