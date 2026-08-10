@@ -95,6 +95,7 @@ One command, three suites, all asserting on the real `dist/` output:
 | `test/accessibility.test.mjs` | Heading structure, landmarks, skip link, unique ids, accessible names, colour-independence, control state, zoom — see [Accessibility](#accessibility) |
 | `test/served-site.test.mjs` | HTTP behaviour: clean URLs, 404s, MIME types, cache policy |
 | `test/api-contract.test.mjs` | The validators guarding the network boundary — imports the TypeScript source directly (Node strips the types) |
+| `test/api-transport.test.mjs` | `apiRequest` against a real local server: timeout, cancellation, error mapping, and that a 2xx failing its validator is rejected |
 | `test/comments.test.mjs` | The XSS rule in `mount.ts`, that only `api.ts` calls `fetch`, and the shipped comment shell |
 
 There is no browser and no browser dependency. `test/served-site.test.mjs`
@@ -158,8 +159,7 @@ portfolio-site/
 │   │   ├── api.ts              # ★ The only place fetch() hits the API
 │   │   ├── api-contract.ts     # ★ Types + runtime validators from openapi.yaml
 │   │   ├── comments.ts         #   listComments / createComment
-│   │   ├── views.ts            #   recordView (split so the beacon stays small)
-│   │   └── health.ts           #   /healthz, /readyz
+│   │   └── views.ts            #   recordView (split so the beacon stays small)
 │   ├── features/
 │   │   └── comments/mount.ts   # ⚠ client-only comment UI, dynamically imported
 │   ├── styles/
@@ -482,9 +482,13 @@ transcription.
 |---|---|
 | `src/lib/api-contract.ts` | Types, runtime validators, and the documented limits. No `fetch`, no `import.meta.env` — so it unit-tests under plain `node --test`. |
 | `src/lib/api.ts` | `apiRequest()`: base URL, timeout, cancellation, error mapping, response validation. **The only place `fetch` is called.** A test enforces that. |
-| `src/lib/health.ts` | `/healthz`, `/readyz`. |
 | `src/lib/comments.ts` | `listComments`, `createComment`. |
 | `src/lib/views.ts` | `recordView`. Separate from comments so the eager view beacon does not pull the comment client into its chunk. |
+
+`apiRequest(path, options)` delegates to `requestFrom(base, path, options)`.
+The split exists so the transport can be tested against a local server —
+`import.meta.env` has no value outside the Vite build, so a module-level base
+cannot be exercised directly.
 
 `apiRequest` always rejects with an `ApiError` carrying a `kind`
 (`network` / `timeout` / `http` / `malformed`), so call sites branch on that

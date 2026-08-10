@@ -7,7 +7,12 @@
 // The site is static and stays useful with the backend down: these calls only
 // ever power optional fragments, never page content. See FEAT-204.
 
-import { isErrorBody } from "./api-contract";
+// Explicit .ts extension, unlike the rest of the codebase: this module is
+// imported directly by test/api-transport.test.mjs, and Node's ESM resolver
+// (unlike Vite's) will not guess it. Astro's tsconfig sets
+// allowImportingTsExtensions, so both toolchains accept this. Do not "tidy"
+// the extension away — it breaks the transport tests.
+import { isErrorBody } from "./api-contract.ts";
 
 /**
  * Public base for the API. `/api` in the container (same origin, so the
@@ -17,7 +22,20 @@ import { isErrorBody } from "./api-contract";
  * PUBLIC_* is compiled into public output — it must never hold a secret. This
  * is the only public base configuration; nothing else may introduce another.
  */
-export const API_BASE: string = import.meta.env.PUBLIC_API_BASE_URL ?? "";
+export const API_BASE: string = readConfiguredBase();
+
+function readConfiguredBase(): string {
+  try {
+    // Vite replaces this with a string literal at build time.
+    return import.meta.env.PUBLIC_API_BASE_URL ?? "";
+  } catch {
+    // `import.meta.env` exists only inside the Vite build. Under the Node test
+    // runner it does not, and reading through it would throw at import time —
+    // which would make this module untestable. There is no configured base
+    // outside the build; tests pass one explicitly to requestFrom().
+    return "";
+  }
+}
 
 /** Whether a Go backend is configured. Pages fall back to static content when
     false, and dynamic fragments are not rendered at all. */
@@ -85,10 +103,13 @@ export interface RequestOptions<T> {
   expectNoContent?: boolean;
 }
 
-function buildUrl(path: string, query: RequestOptions<unknown>["query"]): string {
-  // API_BASE may or may not end in "/", and path always starts with one.
-  const base = API_BASE.replace(/\/+$/, "");
-  const url = `${base}${path}`;
+export function buildUrl(
+  base: string,
+  path: string,
+  query?: RequestOptions<unknown>["query"],
+): string {
+  // The base may or may not end in "/", and path always starts with one.
+  const url = `${base.replace(/\/+$/, "")}${path}`;
   if (!query) return url;
 
   const params = new URLSearchParams();
@@ -128,12 +149,18 @@ function withTimeout(
  *
  * Always rejects with an ApiError — never a bare TypeError, never an
  * unvalidated object — so every call site has one thing to catch.
+ *
+ * Prefer `apiRequest`, which supplies the configured base. This variant takes
+ * the base explicitly so the transport rules can be exercised against a local
+ * server in `test/api-transport.test.mjs`; `import.meta.env` does not exist
+ * outside the Vite build, so a module-level base cannot be tested directly.
  */
-export async function apiRequest<T>(
+export async function requestFrom<T>(
+  base: string,
   path: string,
   options: RequestOptions<T> = {},
 ): Promise<T> {
-  if (!apiConfigured()) {
+  if (base.length === 0) {
     throw new ApiError("network", 0, "No API base is configured");
   }
 
@@ -142,7 +169,7 @@ export async function apiRequest<T>(
 
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, query), {
+    response = await fetch(buildUrl(base, path, query), {
       method,
       signal: combined,
       headers: {
@@ -197,4 +224,13 @@ export async function apiRequest<T>(
     throw new ApiError("malformed", response.status, "Response did not match the API contract");
   }
   return parsed;
+}
+
+/**
+ * The call every endpoint module uses: `requestFrom` against the configured
+ * base. Nothing outside this module may call `fetch` at the API — a test in
+ * test/comments.test.mjs enforces that.
+ */
+export function apiRequest<T>(path: string, options: RequestOptions<T> = {}): Promise<T> {
+  return requestFrom<T>(API_BASE, path, options);
 }
