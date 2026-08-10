@@ -1,13 +1,8 @@
 ---
 import PacketSprite from "./PacketSpriteSvg.astro";
+import { NAV_LINKS } from "../../lib/site";
 
 const path = Astro.url.pathname;
-const links = [
-  { label: "Projects", href: "/projects" },
-  { label: "Blogs", href: "/blog" },
-  { label: "Reviews", href: "/reviews" },
-  { label: "About", href: "/about" },
-];
 const isActive = (href: string) => path === href || path.startsWith(href + "/");
 ---
 
@@ -41,9 +36,10 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
 
     <div class="flex items-center gap-5">
       {
-        links.map((l) => (
+        NAV_LINKS.map((l) => (
           <a
             href={l.href}
+            aria-current={isActive(l.href) ? "page" : undefined}
             class:list={[
               "text-[15px] font-mono transition-colors",
               isActive(l.href)

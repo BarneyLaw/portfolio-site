@@ -135,6 +135,69 @@ test("internal links point at something that exists", () => {
   }
 });
 
+/** Every <a> in a page, as { href, target, rel, tag }. */
+function anchorsIn(html) {
+  return [...html.matchAll(/<a\s([^>]*)>/g)].map((m) => {
+    const tag = m[1];
+    const attr = (name) => tag.match(new RegExp(`${name}="([^"]*)"`))?.[1];
+    return { href: attr("href"), target: attr("target"), rel: attr("rel"), tag };
+  });
+}
+
+test("external links open safely", () => {
+  let seen = 0;
+  for (const file of htmlFiles) {
+    for (const a of anchorsIn(readFileSync(file, "utf8"))) {
+      if (!a.href?.startsWith("http")) continue;
+      seen++;
+      assert.equal(
+        a.target,
+        "_blank",
+        `${routeOf(file)}: external link ${a.href} should open in a new context`,
+      );
+      // Without noopener the opened page can steer this one via window.opener.
+      assert.match(
+        a.rel ?? "",
+        /\bnoopener\b/,
+        `${routeOf(file)}: external link ${a.href} is missing rel="noopener"`,
+      );
+    }
+  }
+  assert.ok(seen > 0, "no external links found — the check would be vacuous");
+});
+
+test("primary navigation is present and resolvable on every page", () => {
+  for (const file of htmlFiles) {
+    const hrefs = new Set(anchorsIn(readFileSync(file, "utf8")).map((a) => a.href));
+    for (const route of ["/", "/projects", "/blog", "/reviews", "/about"]) {
+      assert.ok(hrefs.has(route), `${routeOf(file)} does not link to ${route}`);
+      assert.ok(routes.has(route), `nav target ${route} was never built`);
+    }
+  }
+});
+
+test("calls to action are real links, not decorated spans", () => {
+  // The About page's github/email links and the project sidebar links were all
+  // <span class="… cursor-pointer">, which look clickable and do nothing.
+  const about = readFileSync(join(dist, "about", "index.html"), "utf8");
+  const hrefs = anchorsIn(about).map((a) => a.href);
+  assert.ok(
+    hrefs.some((h) => h?.startsWith("mailto:")),
+    "/about exposes no contact address",
+  );
+  assert.ok(
+    hrefs.some((h) => h?.startsWith("https://github.com/")),
+    "/about does not link to GitHub",
+  );
+  for (const file of htmlFiles) {
+    assert.doesNotMatch(
+      readFileSync(file, "utf8"),
+      /<span[^>]*cursor-pointer/,
+      `${routeOf(file)} still renders a span styled as a clickable control`,
+    );
+  }
+});
+
 test("ships a non-empty stylesheet", () => {
   const home = readFileSync(join(dist, "index.html"), "utf8");
   const sheets = [...home.matchAll(/href="(\/[^"]+\.css)"/g)].map((m) => m[1]);

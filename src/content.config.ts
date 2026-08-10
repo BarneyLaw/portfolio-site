@@ -46,6 +46,20 @@ const projects = defineCollection({
       codeSnippet: z.string(),
       order: z.number().default(0),
       draft,
+      /** Off-site destinations for the detail-page sidebar (repo, release
+          notes, demo…). `.url()` rejects a typo'd or relative href at build
+          time. Omit entirely when a project has nowhere to point yet — the
+          sidebar block disappears rather than showing a dead link. */
+      links: z
+        .array(
+          z.object({
+            label: z.string(),
+            href: z
+              .string()
+              .regex(/^https?:\/\//, "project links must be absolute http(s) URLs"),
+          }),
+        )
+        .default([]),
       image: image().optional(),
       coverArt: image().optional(),
       imageAlt: z.string().optional(),
