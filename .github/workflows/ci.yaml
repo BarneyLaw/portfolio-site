@@ -54,9 +54,9 @@ jobs:
           retention-days: 7
 
   container:
-    name: Container build
+    name: Container build and smoke test
     # The deploy image is built and pushed by container.yaml on master; here we
-    # only prove the Dockerfile and nginx config still assemble on a PR.
+    # prove the Dockerfile and nginx config still assemble *and serve*.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
@@ -67,13 +67,82 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image (no push)
+      - name: Build image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: false
+          # Load into the local daemon so the next step can run it.
+          load: true
+          tags: packetcraft-site:ci
           build-args: |
             PUBLIC_API_BASE_URL=/api
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      - name: Start the container
+        run: |
+          docker run -d --name site -p 8080:8080 packetcraft-site:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
+              echo "container is serving"; exit 0
+            fi
+            sleep 1
+          done
+          echo "container did not become ready"; docker logs site; exit 1
+
+      # These probe the real nginx config — try_files, MIME types and cache
+      # headers — which the Node-based test/served-site.test.mjs only imitates.
+      - name: Smoke-test the served site
+        run: |
+          set -euo pipefail
+          base=http://127.0.0.1:8080
+          fail() { echo "FAIL: $*"; docker logs site; exit 1; }
+
+          status() { curl -s -o /dev/null -w '%{http_code}' "$1"; }
+          header() { curl -s -o /dev/null -D - "$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2-; }
+
+          echo "== health =="
+          [ "$(status $base/healthz)" = 200 ] || fail "/healthz"
+
+          echo "== clean URLs (nginx try_files) =="
+          for path in / /about /blog /projects /reviews \
+                      /blog/building-a-homelab /blog/building-a-homelab/ \
+                      /projects/k3s-cluster /reviews/warframe; do
+            code=$(status "$base$path")
+            [ "$code" = 200 ] || fail "$path returned $code"
+          done
+
+          echo "== missing routes are 404 =="
+          for path in /nope /blog/does-not-exist; do
+            code=$(status "$base$path")
+            [ "$code" = 404 ] || fail "$path returned $code, expected 404"
+          done
+
+          echo "== discovery endpoints =="
+          for path in /rss.xml /sitemap-index.xml; do
+            [ "$(status $base$path)" = 200 ] || fail "$path"
+            header "$base$path" content-type | grep -qi xml || fail "$path content-type"
+          done
+
+          echo "== asset MIME types and cache policy =="
+          css=$(curl -s $base/ | grep -o '/_astro/[^"]*\.css' | head -1)
+          [ -n "$css" ] || fail "no stylesheet linked from /"
+          header "$base$css" content-type | grep -qi 'text/css' || fail "css content-type"
+          header "$base$css" cache-control | grep -qi immutable || fail "css should be immutable"
+
+          # Un-fingerprinted, so it must stay revalidatable.
+          header "$base/og-default.png" content-type | grep -qi 'image/png' || fail "og card type"
+          if header "$base/og-default.png" cache-control | grep -qi immutable; then
+            fail "og-default.png must not be immutable"
+          fi
+
+          # HTML must revalidate or a deploy never appears.
+          header "$base/" cache-control | grep -qi 'no-cache' || fail "html should be no-cache"
+
+          echo "all container smoke checks passed"
+
+      - name: Stop the container
+        if: always()
+        run: docker rm -f site || true
