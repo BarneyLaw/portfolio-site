@@ -31,7 +31,11 @@ const EDGE = "text-muted-foreground/40";
 
 {
   show && (
-    <nav class="flex justify-center items-center gap-2 mt-8" aria-label={label}>
+    <nav
+      data-print="hide"
+      class="flex justify-center items-center gap-2 mt-8"
+      aria-label={label}
+    >
       {page.prev ? (
         <a href={page.prev} rel="prev" class:list={[LINK, OTHER]} aria-label="Previous page">
           ‹
