@@ -126,20 +126,40 @@ const twitterCard =
     class="min-h-screen flex flex-col bg-background text-foreground font-mono"
     style="font-family: 'IBM Plex Mono', monospace"
   >
+    {/* Lets a keyboard or screen-reader user jump past the nav on every page
+        instead of tabbing through it again on each navigation. Off-screen
+        until focused — the first thing Tab reaches. */}
+    <a
+      href="#main"
+      data-print="hide"
+      class="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-3 focus:py-2 focus:rounded focus:bg-card focus:text-foreground focus:border focus:border-primary font-mono text-[14px]"
+    >
+      Skip to content
+    </a>
     <Nav />
-    <div class="flex-1">
+    <div id="main" class="flex-1">
       <slot />
     </div>
     <Footer />
 
     <script>
+      // The pre-paint script in <head> has already applied the saved theme;
+      // this only wires the control and keeps its pressed state in sync, so
+      // a screen reader announces "Dark mode, pressed" rather than just
+      // "button".
       const btn = document.getElementById("theme-toggle");
-      btn?.addEventListener("click", () => {
-        const dark = document.documentElement.classList.toggle("dark");
-        try {
-          localStorage.setItem("theme", dark ? "dark" : "light");
-        } catch (e) {}
-      });
+      if (btn) {
+        const sync = (dark: boolean) => btn.setAttribute("aria-pressed", String(dark));
+        sync(document.documentElement.classList.contains("dark"));
+
+        btn.addEventListener("click", () => {
+          const dark = document.documentElement.classList.toggle("dark");
+          sync(dark);
+          try {
+            localStorage.setItem("theme", dark ? "dark" : "light");
+          } catch (e) {}
+        });
+      }
     </script>
   </body>
 </html>

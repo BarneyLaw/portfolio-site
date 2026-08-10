@@ -130,6 +130,31 @@
     @apply bg-background text-foreground;
   }
 
+  /* ── Visible focus ────────────────────────────────────────────────────
+     Nothing here previously drew a focus ring, so keyboard users navigating
+     the site had no idea where they were. :focus-visible (rather than :focus)
+     keeps the ring off mouse clicks. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* ── Motion ───────────────────────────────────────────────────────────
+     A site-wide backstop for people who ask their OS for less movement.
+     Individual components may still opt out more precisely (the nav mascot
+     stops entirely), but nothing should be able to animate past this. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
