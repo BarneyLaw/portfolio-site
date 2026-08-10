@@ -198,6 +198,87 @@ test("calls to action are real links, not decorated spans", () => {
   }
 });
 
+test("emits an RSS feed of exactly the published posts", () => {
+  const feed = readFileSync(join(dist, "rss.xml"), "utf8");
+  const links = [...feed.matchAll(/<link>([^<]+)<\/link>/g)].map((m) => m[1]);
+  const items = links.filter((l) => l.includes("/blog/"));
+
+  const published = entriesIn("blog").filter((e) => e.published);
+  assert.equal(items.length, published.length, "feed item count != published post count");
+  for (const { slug } of published) {
+    assert.ok(
+      items.some((l) => l.includes(`/blog/${slug}`)),
+      `feed is missing ${slug}`,
+    );
+  }
+  for (const { slug } of entriesIn("blog").filter((e) => !e.published)) {
+    assert.ok(!feed.includes(`/blog/${slug}`), `feed leaks unpublished ${slug}`);
+  }
+  // Absolute URLs and RFC-822 dates, or readers reject the feed.
+  for (const link of links) {
+    assert.match(link, /^https:\/\//, `feed link ${link} is not absolute`);
+  }
+  assert.match(feed, /<pubDate>[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4}/, "bad pubDate");
+});
+
+test("sitemap lists the public routes and nothing else", () => {
+  const locs = [...readFileSync(join(dist, "sitemap-0.xml"), "utf8").matchAll(
+    /<loc>([^<]+)<\/loc>/g,
+  )].map((m) => m[1]);
+  assert.ok(locs.length > 0, "empty sitemap");
+
+  const paths = new Set(locs.map((l) => new URL(l).pathname.replace(/(.)\/$/, "$1")));
+  for (const route of ["/", "/about", "/blog", "/projects", "/reviews"]) {
+    assert.ok(paths.has(route), `sitemap is missing ${route}`);
+  }
+  // Every listed URL must be a page we actually built.
+  for (const path of paths) {
+    assert.ok(routes.has(path), `sitemap lists ${path}, which was never built`);
+  }
+  for (const collection of ["blog", "projects", "reviews"]) {
+    for (const { slug } of entriesIn(collection).filter((e) => !e.published)) {
+      assert.ok(
+        !paths.has(`/${collection}/${slug}`),
+        `sitemap leaks unpublished /${collection}/${slug}`,
+      );
+    }
+  }
+});
+
+test("canonical URLs agree with the sitemap and are unique", () => {
+  const sitemapLocs = new Set(
+    [...readFileSync(join(dist, "sitemap-0.xml"), "utf8").matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+      (m) => m[1],
+    ),
+  );
+  const seen = new Map();
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, "utf8");
+    const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+    assert.ok(canonical, `${routeOf(file)} has no canonical URL`);
+    assert.match(canonical, /^https:\/\//, `${routeOf(file)} canonical is not absolute`);
+    // Two pages claiming the same canonical means one is telling crawlers to
+    // drop it. Two *forms* of the same URL is the subtler version of that bug,
+    // which is why this is checked against the sitemap's exact spelling.
+    assert.ok(!seen.has(canonical), `${routeOf(file)} shares a canonical with ${seen.get(canonical)}`);
+    seen.set(canonical, routeOf(file));
+    assert.ok(
+      sitemapLocs.has(canonical),
+      `${routeOf(file)} canonical ${canonical} is spelled differently in the sitemap`,
+    );
+  }
+});
+
+test("every page advertises the feed", () => {
+  for (const file of htmlFiles) {
+    assert.match(
+      readFileSync(file, "utf8"),
+      /<link rel="alternate" type="application\/rss\+xml"[^>]*href="https:\/\/[^"]*\/rss\.xml"/,
+      `${routeOf(file)} does not advertise the RSS feed`,
+    );
+  }
+});
+
 test("ships a non-empty stylesheet", () => {
   const home = readFileSync(join(dist, "index.html"), "utf8");
   const sheets = [...home.matchAll(/href="(\/[^"]+\.css)"/g)].map((m) => m[1]);
