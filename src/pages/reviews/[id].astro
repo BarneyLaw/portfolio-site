@@ -17,7 +17,7 @@ const r = review.data;
 const { Content } = await render(review);
 ---
 
-<Layout title={`${r.name} · packetcraft`} description={r.excerpt}>
+<Layout title={r.name} description={r.excerpt}>
   <main class="max-w-5xl mx-auto px-6 py-12">
     <a
       href="/reviews"
