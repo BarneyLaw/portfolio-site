@@ -420,6 +420,84 @@ test("no post appears on two archive pages", () => {
   }
 });
 
+/** The rendered MDX body of a page, or "" if it has none. */
+const articleOf = (html) => html.match(/<article class="mdx-content">([\s\S]*?)<\/article>/)?.[1] ?? "";
+
+test("every MDX heading is a keyboard-reachable anchor to itself", () => {
+  let checked = 0;
+  for (const file of htmlFiles) {
+    const article = articleOf(readFileSync(file, "utf8"));
+    for (const [, tag, id, inner] of article.matchAll(
+      /<(h[2-4]) id="([^"]+)">([\s\S]*?)<\/\1>/g,
+    )) {
+      checked++;
+      const href = inner.match(/^<a class="heading-anchor" href="([^"]+)"/)?.[1];
+      assert.equal(
+        href,
+        `#${id}`,
+        `${routeOf(file)}: <${tag} id="${id}"> is not linked to its own id`,
+      );
+    }
+  }
+  assert.ok(checked > 0, "no MDX headings found — the check would be vacuous");
+});
+
+test("table of contents entries point at headings that exist", () => {
+  let checked = 0;
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, "utf8");
+    const toc = html.match(/<nav aria-label="Table of contents">([\s\S]*?)<\/nav>/)?.[1];
+    if (!toc) continue;
+
+    const ids = new Set([...articleOf(html).matchAll(/<h[2-4] id="([^"]+)"/g)].map((m) => m[1]));
+    for (const [, target] of toc.matchAll(/href="#([^"]+)"/g)) {
+      checked++;
+      assert.ok(ids.has(target), `${routeOf(file)}: contents links to #${target}, no such heading`);
+    }
+  }
+  assert.ok(checked > 0, "no table of contents rendered — the check would be vacuous");
+});
+
+test("fenced code is highlighted at build time and cannot overflow the page", () => {
+  for (const file of htmlFiles) {
+    const article = articleOf(readFileSync(file, "utf8"));
+    for (const [tag] of article.matchAll(/<pre[^>]*>/g)) {
+      // Shiki ran at build time, so no highlighter ships to the browser.
+      assert.match(tag, /class="[^"]*astro-code/, `${routeOf(file)}: <pre> was not highlighted`);
+      assert.match(tag, /overflow-x:\s*auto/, `${routeOf(file)}: <pre> can overflow horizontally`);
+    }
+  }
+});
+
+test("copy-code is progressive enhancement, not server-rendered", () => {
+  for (const file of htmlFiles) {
+    assert.doesNotMatch(
+      readFileSync(file, "utf8"),
+      /<button[^>]*class="[^"]*code-copy/,
+      `${routeOf(file)} ships a copy button in HTML; it must be script-injected`,
+    );
+  }
+});
+
+test("stylesheet carries print rules and dark-mode code colours", () => {
+  const home = readFileSync(join(dist, "index.html"), "utf8");
+  const sheet = home.match(/href="(\/[^"]+\.css)"/)?.[1];
+  const css = readFileSync(join(dist, sheet), "utf8");
+
+  assert.match(css, /@media\s+print/, "no print styles shipped");
+  // The minifier drops quotes from attribute selectors, so accept both forms.
+  assert.match(css, /\[data-print=["']?hide["']?\]/, "print styles cannot hide site chrome");
+  assert.match(css, /--shiki-dark/, "dark-mode code colours are missing");
+});
+
+test("site chrome is marked for print suppression", () => {
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, "utf8");
+    assert.match(html, /<header[^>]*data-print="hide"/, `${routeOf(file)} header prints`);
+    assert.match(html, /<footer[^>]*data-print="hide"/, `${routeOf(file)} footer prints`);
+  }
+});
+
 test("ships a non-empty stylesheet", () => {
   const home = readFileSync(join(dist, "index.html"), "utf8");
   const sheets = [...home.matchAll(/href="(\/[^"]+\.css)"/g)].map((m) => m[1]);
