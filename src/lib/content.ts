@@ -82,3 +82,15 @@ export async function getReviews(): Promise<ReviewEntry[]> {
 export async function getReview(id: string): Promise<ReviewEntry | undefined> {
   return (await getReviews()).find((r) => r.id === id);
 }
+
+/**
+ * The image a social scraper should show for an entry: its cover art if it has
+ * any, else its preview image, else nothing — in which case Layout falls back
+ * to the site-wide card. Cover art wins because it is chosen to look good at
+ * card size, while `image` is often a dense screenshot.
+ */
+export function socialImageOf(entry: {
+  data: { coverArt?: ImageMetadata; image?: ImageMetadata };
+}): ImageMetadata | undefined {
+  return entry.data.coverArt ?? entry.data.image;
+}
