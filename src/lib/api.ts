@@ -84,7 +84,9 @@ export class ApiError extends Error {
 }
 
 export interface RequestOptions<T> {
-  method?: "GET" | "POST";
+  /** PUT and DELETE are used for the like endpoints, which are idempotent
+      state assertions rather than "add one" actions. */
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   /** Serialised as JSON. Omit for bodyless requests. */
   body?: unknown;
   /** Appended as a query string; undefined and null entries are dropped. */

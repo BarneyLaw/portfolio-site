@@ -72,6 +72,12 @@ export interface CommentPage {
   next_before_id: number | null;
 }
 
+/** components.schemas.PostStats — public aggregate totals for one post. */
+export interface PostStats {
+  views: number;
+  likes: number;
+}
+
 /** components.schemas.CreateComment */
 export interface CreateComment {
   author_name: string;
@@ -122,6 +128,19 @@ export function isCommentPage(value: unknown): value is CommentPage {
 
   const cursor = value.next_before_id;
   return cursor === null || (Number.isSafeInteger(cursor) && (cursor as number) >= 1);
+}
+
+/** Counters are int64 and non-negative in the spec. A negative or fractional
+    total means the server is confused; showing it would be worse than showing
+    the fragment's unavailable state. */
+export function isPostStats(value: unknown): value is PostStats {
+  if (!isRecord(value)) return false;
+  return (
+    Number.isSafeInteger(value.views) &&
+    (value.views as number) >= 0 &&
+    Number.isSafeInteger(value.likes) &&
+    (value.likes as number) >= 0
+  );
 }
 
 // ── Client-side request validation ───────────────────────────────────────
