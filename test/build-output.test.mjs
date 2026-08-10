@@ -346,6 +346,80 @@ test("content images reserve their space before loading", () => {
   }
 });
 
+/** dist path of a route like "/blog/page/2". */
+const fileForRoute = (route) =>
+  join(dist, ...route.split("/").filter(Boolean), "index.html");
+
+/** The blog archive: /blog followed by /blog/page/2, /blog/page/3, … */
+function archiveRoutes() {
+  const paged = [...routes]
+    .filter((r) => /^\/blog\/page\/\d+$/.test(r))
+    .sort((a, b) => Number(a.split("/").pop()) - Number(b.split("/").pop()));
+  return ["/blog", ...paged];
+}
+
+test("every published post is reachable from the archive without JavaScript", () => {
+  const linked = new Set();
+  for (const route of archiveRoutes()) {
+    const html = readFileSync(fileForRoute(route), "utf8");
+    for (const m of html.matchAll(/href="\/blog\/([a-z0-9-]+)"/g)) linked.add(m[1]);
+  }
+  for (const { slug } of entriesIn("blog").filter((e) => e.published)) {
+    assert.ok(linked.has(slug), `${slug} is not linked from any archive page`);
+  }
+});
+
+test("archive pages chain correctly and have no dead end controls", () => {
+  const pages = archiveRoutes();
+  pages.forEach((route, index) => {
+    const html = readFileSync(fileForRoute(route), "utf8");
+    const prev = html.match(/href="([^"]+)" rel="prev"/)?.[1];
+    const next = html.match(/href="([^"]+)" rel="next"/)?.[1];
+
+    if (index === 0) {
+      assert.equal(prev, undefined, `${route} offers a previous page from page 1`);
+    } else {
+      assert.equal(prev, pages[index - 1], `${route} previous link is wrong`);
+    }
+
+    if (index === pages.length - 1) {
+      assert.equal(next, undefined, `${route} offers a next page from the last page`);
+    } else {
+      assert.equal(next, pages[index + 1], `${route} next link is wrong`);
+    }
+
+    // Paging must never depend on a button or a script.
+    assert.doesNotMatch(
+      html.match(/<nav[^>]*aria-label="Blog pages"[\s\S]*?<\/nav>/)?.[0] ?? "",
+      /<button/,
+      `${route} pages with a <button> instead of a link`,
+    );
+  });
+
+  // A single-page archive shows no pagination chrome at all.
+  if (pages.length === 1) {
+    assert.doesNotMatch(
+      readFileSync(fileForRoute("/blog"), "utf8"),
+      /aria-label="Blog pages"/,
+      "single-page archive still renders pagination controls",
+    );
+  }
+});
+
+test("no post appears on two archive pages", () => {
+  const seen = new Map();
+  for (const route of archiveRoutes()) {
+    const html = readFileSync(fileForRoute(route), "utf8");
+    // The featured hero on page 1 is deliberately held out of the paged list,
+    // so only count links inside the list itself.
+    const list = html.match(/<div class="flex flex-col divide-y[\s\S]*?<\/div>\s*(?:<nav|<\/main)/)?.[0] ?? "";
+    for (const m of list.matchAll(/href="\/blog\/([a-z0-9-]+)"/g)) {
+      assert.ok(!seen.has(m[1]), `${m[1]} appears on both ${seen.get(m[1])} and ${route}`);
+      seen.set(m[1], route);
+    }
+  }
+});
+
 test("ships a non-empty stylesheet", () => {
   const home = readFileSync(join(dist, "index.html"), "utf8");
   const sheets = [...home.matchAll(/href="(\/[^"]+\.css)"/g)].map((m) => m[1]);
