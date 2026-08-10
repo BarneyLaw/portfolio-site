@@ -64,22 +64,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      # Plain `docker build`, not buildx. This job only needs the image in the
+      # local daemon so the next step can run it, and dockerd has BuildKit
+      # built in — whereas setup-buildx-action's docker-container driver must
+      # first pull moby/buildkit from Docker Hub, which is a network round trip
+      # that can (and did) time out before any of our code is even read.
+      # The trade-off is no cross-run layer cache on this job; the deploy build
+      # in container.yaml still uses buildx and keeps its cache.
       - name: Build image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          # Load into the local daemon so the next step can run it.
-          load: true
-          tags: packetcraft-site:ci
-          build-args: |
-            PUBLIC_API_BASE_URL=/api
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
+        run: |
+          docker build \
+            --build-arg PUBLIC_API_BASE_URL=/api \
+            -t packetcraft-site:ci \
+            .
 
       - name: Start the container
         run: |
