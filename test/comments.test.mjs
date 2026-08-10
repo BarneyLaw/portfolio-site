@@ -45,36 +45,63 @@ const commentsEnabled = (p) => !/^comments:\s*false\b/m.test(p.frontmatter);
 
 // ── Source guards ────────────────────────────────────────────────────────
 
-test("comment rendering never writes HTML from untrusted values", () => {
-  // Comment bodies and author names come from the database and are echoed to
-  // every reader. The whole defence is that they are only ever assigned with
-  // textContent, so any HTML-writing sink appearing in this file is a bug,
-  // not a style preference.
-  const source = readFileSync(join(root, "src", "features", "comments", "mount.ts"), "utf8");
-  const code = source
+/** Every .ts file under src/features and src/lib, as { name, source }. */
+function clientModules() {
+  const out = [];
+  const walk = (dir, prefix) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path, `${prefix}${entry.name}/`);
+      else if (entry.name.endsWith(".ts")) {
+        out.push({ name: `${prefix}${entry.name}`, source: readFileSync(path, "utf8") });
+      }
+    }
+  };
+  walk(join(root, "src", "features"), "features/");
+  walk(join(root, "src", "lib"), "lib/");
+  return out;
+}
+
+/** Strip comments so a sink named in prose is not mistaken for a use. */
+const codeOnly = (source) =>
+  source
     .split("\n")
-    .filter((line) => !line.trim().startsWith("//") && !line.trim().startsWith("*"))
+    .filter((line) => {
+      const t = line.trim();
+      return !t.startsWith("//") && !t.startsWith("*") && !t.startsWith("/*");
+    })
     .join("\n");
 
-  for (const sink of ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"]) {
-    assert.ok(!code.includes(sink), `mount.ts uses ${sink}; comment text must go through textContent`);
+test("no feature module writes HTML from untrusted values", () => {
+  // Comment bodies, author names and counters all come from the API and are
+  // echoed to every reader. The whole defence is that they are only ever
+  // assigned with textContent, so any HTML-writing sink in these modules is a
+  // bug, not a style preference.
+  for (const { name, source } of clientModules()) {
+    const code = codeOnly(source);
+    for (const sink of ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"]) {
+      assert.ok(!code.includes(sink), `${name} uses ${sink}; API values must go through textContent`);
+    }
   }
-  assert.ok(code.includes("textContent"), "mount.ts should render text with textContent");
+
+  // And the two renderers must actually be using textContent, or the check
+  // above would pass on a module that renders nothing at all.
+  for (const renderer of ["features/comments/mount.ts", "features/post-stats/mount.ts"]) {
+    const module = clientModules().find((m) => m.name === renderer);
+    assert.ok(module, `${renderer} not found`);
+    assert.ok(module.source.includes("textContent"), `${renderer} should render with textContent`);
+  }
 });
 
 test("the API client is the only thing that calls fetch", () => {
   // Scattered fetch() calls are how base URLs, timeouts and validation drift
   // apart. Everything must go through apiRequest in src/lib/api.ts.
-  const libDir = join(root, "src", "lib");
-  const offenders = [];
-  for (const file of readdirSync(libDir)) {
-    if (file === "api.ts" || !file.endsWith(".ts")) continue;
-    if (readFileSync(join(libDir, file), "utf8").includes("fetch(")) offenders.push(file);
-  }
-  const featureFile = join(root, "src", "features", "comments", "mount.ts");
-  if (readFileSync(featureFile, "utf8").includes("fetch(")) offenders.push("features/comments/mount.ts");
+  const offenders = clientModules()
+    .filter((m) => m.name !== "lib/api.ts")
+    .filter((m) => codeOnly(m.source).includes("fetch("))
+    .map((m) => m.name);
 
-  assert.deepEqual(offenders, [], `these call fetch() directly instead of using apiRequest`);
+  assert.deepEqual(offenders, [], "these call fetch() directly instead of using apiRequest");
 });
 
 // ── Emitted markup ───────────────────────────────────────────────────────
@@ -137,6 +164,24 @@ test("the comment section is a labelled region with a heading", () => {
       /<h2 id="comments-heading"/,
       `/blog/${post.slug} comment heading is missing or not an h2`,
     );
+  }
+});
+
+test("the stats row reserves its height and ships no control", () => {
+  if (!apiConfigured) return;
+  for (const post of posts) {
+    const row = post.html.match(/<div[^>]*data-post-stats[^>]*>/)?.[0];
+    assert.ok(row, `/blog/${post.slug} has no stats row`);
+    assert.match(row, new RegExp(`data-slug="${post.slug}"`), `stats row slug mismatch`);
+    // Reserving height is what stops the numbers arriving and shoving the
+    // comments below them down the page.
+    assert.match(row, /min-h-\[/, `/blog/${post.slug} stats row reserves no height`);
+
+    // A like button in static HTML would do nothing without JavaScript.
+    const section = post.html.slice(post.html.indexOf("data-post-stats"));
+    const beforeComments = section.slice(0, section.indexOf("data-comments"));
+    assert.doesNotMatch(beforeComments, /<button/, `/blog/${post.slug} ships a like button in HTML`);
+    assert.match(beforeComments, /data-post-stats-status/, `no status region in the stats row`);
   }
 });
 
