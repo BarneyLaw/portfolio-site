@@ -1,0 +1,83 @@
+---
+import { apiConfigured } from "../../lib/api";
+
+interface Props {
+  /** Post slug — the `{slug}` path parameter the API keys views on. */
+  slug: string;
+}
+
+const { slug } = Astro.props;
+
+// No backend configured at build time means no endpoint to call, so emit
+// nothing at all rather than a script that would only fail.
+const show = apiConfigured();
+
+// Named so the intent survives a later reader: a view is recorded only after
+// the reader has stayed this long, which keeps bounces and accidental clicks
+// out of the count. The server deduplicates per visitor per rolling window on
+// top of this, so a refresh does not inflate anything.
+const DWELL_MS = 5000;
+---
+
+{
+  show && (
+    /* Renders nothing visible: openapi.yaml defines POST /posts/{slug}/view but
+       no endpoint that reads a count back, so there is no number to display.
+       When a read endpoint exists this element is where it would go. */
+    <span data-view-beacon data-slug={slug} data-dwell={String(DWELL_MS)} hidden />
+  )
+}
+
+<script>
+  const beacon = document.querySelector<HTMLElement>("[data-view-beacon]");
+  const slug = beacon?.dataset.slug;
+
+  if (beacon && slug) {
+    const dwellMs = Number(beacon.dataset.dwell) || 5000;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let sent = false;
+
+    const send = () => {
+      if (sent) return;
+      sent = true;
+      // Imported here rather than at the top of the module: nothing is sent
+      // for at least `dwellMs`, and most readers who bounce before then never
+      // download the API client at all.
+      //
+      // Deliberately unawaited and silent. A view is telemetry: if it fails,
+      // the reader must never see it, and nothing on the page depends on it.
+      import("../../lib/views")
+        .then(({ recordView }) => recordView(slug, controller.signal))
+        .catch(() => {});
+    };
+
+    const start = () => {
+      if (sent || timer !== undefined) return;
+      timer = setTimeout(send, dwellMs);
+    };
+
+    const stop = () => {
+      // Pause rather than count while the tab sits unread in the background.
+      clearTimeout(timer);
+      timer = undefined;
+    };
+
+    // Only count a reader who is actually looking at the page.
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") start();
+      else stop();
+    });
+
+    // Release the timer and any in-flight request when the page goes away.
+    window.addEventListener(
+      "pagehide",
+      () => {
+        stop();
+        controller.abort();
+      },
+      { once: true },
+    );
+  }
+</script>

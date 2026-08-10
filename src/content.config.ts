@@ -52,6 +52,10 @@ const blog = defineCollection({
       excerpt: z.string(),
       featured: z.boolean().default(false),
       draft,
+      /** Set false to close comments on one post. The section then renders
+          nothing at all — no form, no heading. Comments also require the
+          backend to be configured at build time; see src/lib/api.ts. */
+      comments: z.boolean().default(true),
       ...media(ctx),
     }),
 });

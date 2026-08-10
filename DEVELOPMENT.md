@@ -9,8 +9,9 @@ A personal site (blog · reviews · portfolio · project showcase) built to ship
 - **Client JS:** none from a framework. A few hundred bytes of hand-written
   vanilla script per page (theme toggle, list filters, nav mascot, copy-code),
   all progressive enhancement.
-- **Backend:** none today. A Go + database backend can be added later through a
-  deliberate seam (see [Backend seam](#backend-seam-go--db)).
+- **Backend:** optional. A Go + Postgres API powers comments and view recording
+  on blog posts; everything else is static and the site stays fully usable with
+  it down (see [Backend integration](#backend-integration-go--postgres)).
 
 The site began as a Figma Make export (a single ~900-line React `App.tsx`) and
 was migrated to this stack in phases. See [Migration history](#migration-history).
@@ -39,7 +40,7 @@ output, so neither may ever hold a secret.
 | Variable | Default | Effect |
 |---|---|---|
 | `PUBLIC_SITE_ORIGIN` | `https://packetcraft.dev` | Origin used for canonical tags, the RSS feed and the sitemap. Validated during build: must be a bare `https` origin (or `localhost`) with no path. |
-| `PUBLIC_API_BASE_URL` | `/api` in the container, unset locally | Base for the future Go backend. See [Backend seam](#backend-seam-go--db). |
+| `PUBLIC_API_BASE_URL` | `/api` in the container, unset locally | Base for the Go backend. Empty disables every dynamic fragment at build time. See [Backend integration](#backend-integration-go--postgres). |
 
 ### Generated assets
 
@@ -68,6 +69,8 @@ bootstrap is `is:inline` (it has to run before first paint).
 | Nav mascot pause | `src/components/astro/Nav.astro` | Parks the walking packet; persisted, and skipped under `prefers-reduced-motion` |
 | Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling `hidden`; unfiltered without JS |
 | Copy-code buttons | `src/components/astro/CodeCopy.astro` | Injects a copy button into each `.mdx-content pre`; nothing renders without JS |
+| Comments (blog posts) | `src/components/astro/Comments.astro` → `src/features/comments/mount.ts` | Dynamically imported when the section nears the viewport; builds the list and form |
+| View beacon (blog posts) | `src/components/astro/ViewCounter.astro` | Records one view after a 5s dwell; imports the API client only at that point |
 
 That's the complete client-side JS inventory. Everything else — pagination,
 the table of contents, syntax highlighting, filtering's default state — is
@@ -91,6 +94,8 @@ One command, three suites, all asserting on the real `dist/` output:
 | `test/build-output.test.mjs` | Routes emitted, drafts withheld, internal links, external `rel` safety, RSS/sitemap/canonical agreement, social cards, image dimensions, archive paging, heading anchors, print rules, theme persistence, filter/data agreement |
 | `test/accessibility.test.mjs` | Heading structure, landmarks, skip link, unique ids, accessible names, colour-independence, control state, zoom — see [Accessibility](#accessibility) |
 | `test/served-site.test.mjs` | HTTP behaviour: clean URLs, 404s, MIME types, cache policy |
+| `test/api-contract.test.mjs` | The validators guarding the network boundary — imports the TypeScript source directly (Node strips the types) |
+| `test/comments.test.mjs` | The XSS rule in `mount.ts`, that only `api.ts` calls `fetch`, and the shipped comment shell |
 
 There is no browser and no browser dependency. `test/served-site.test.mjs`
 re-implements the `try_files` rule from `nginx.conf` over `node:http`; the
@@ -150,7 +155,13 @@ portfolio-site/
 │   │   ├── site.ts             # ★ Identity, origin, nav/footer/profile links, contact
 │   │   ├── pagination.ts       #   paginate() + blog page size and paths
 │   │   ├── rehype-heading-anchors.mjs # Wraps MDX headings in a link to their own id
-│   │   └── api.ts              # ★ Go backend seam (not wired) + PUBLIC_API_BASE_URL
+│   │   ├── api.ts              # ★ The only place fetch() hits the API
+│   │   ├── api-contract.ts     # ★ Types + runtime validators from openapi.yaml
+│   │   ├── comments.ts         #   listComments / createComment
+│   │   ├── views.ts            #   recordView (split so the beacon stays small)
+│   │   └── health.ts           #   /healthz, /readyz
+│   ├── features/
+│   │   └── comments/mount.ts   # ⚠ client-only comment UI, dynamically imported
 │   ├── styles/
 │   │   ├── index.css           # Entry: imports the five below
 │   │   ├── fonts.css           # IBM Plex Mono @import + @keyframes blink / scan
@@ -197,8 +208,10 @@ dynamic and enumerate their pages with `getStaticPaths()`.
   (all/shipped/in-progress/planned) run a small inline script that toggles the
   `hidden` class on cards by `data-status`. Cards link to `/projects/:id`.
 - **`projects/[id].astro`** — One page per project. Renders the MDX writeup +
-  the `codeSnippet` frontmatter as a `TerminalSnippet`. The "demo" box is a
-  placeholder ([backend seam](#backend-seam-go--db) candidate).
+  the `codeSnippet` frontmatter as a `TerminalSnippet`, and the frontmatter
+  `links` in the sidebar. A live demo/status fragment would be a
+  [backend integration](#backend-integration-go--postgres) candidate; no
+  endpoint exists for it yet.
 - **`reviews/index.astro`** — List from `getReviews()`, same filter pattern as
   projects but keyed on `data-type` (hardware/software). Cards link to
   `/reviews/:id`.
@@ -279,6 +292,7 @@ category: "homelab"
 excerpt: "One-line summary shown in the list and in the feed."
 featured: false           # nominates it for the hero card; newest flagged post wins
 draft: false              # true → no list entry, no page, no feed, no sitemap
+comments: true            # false closes comments on this post; the section vanishes
 coverArt: "../../img/blog/thing.png"   # optional, decorative — see Images below
 coverArtAlt: "…"          # only if the art carries meaning the headline doesn't
 ---
@@ -429,11 +443,16 @@ toggle, the filters, or any layout. It takes about five minutes.
 5. **No JavaScript.** Disable JS and reload. Every post must still be
    reachable through `/blog` and `/blog/page/N`, all projects and reviews must
    be visible (unfiltered), and no control should be present that now does
-   nothing.
-6. **Narrow and wide.** At 320px and at 1440px, no page may scroll sideways.
-7. **Reduced motion.** With the OS "reduce motion" setting on, the nav mascot
+   nothing. On a post, the comment section must show its `<noscript>`
+   explanation and **no form**.
+6. **Comments, when the backend is reachable.** Tab into the form: both fields
+   must be labelled, an empty submit must move focus to the first error, and
+   the honeypot must never receive focus. Stop the backend and reload — the
+   section must say so and the article must be unchanged.
+7. **Narrow and wide.** At 320px and at 1440px, no page may scroll sideways.
+8. **Reduced motion.** With the OS "reduce motion" setting on, the nav mascot
    must be parked and nothing should animate.
-8. **Zoom.** At 200% browser zoom the layout must stay usable.
+9. **Zoom.** At 200% browser zoom the layout must stay usable.
 
 ### Theme: light is the default, on purpose
 
@@ -450,37 +469,99 @@ commit — it is there to make the reversal deliberate.
 `prefers-reduced-motion` is a different question and **is** honoured, both
 site-wide in `src/styles/theme.css` and specifically for the nav mascot.
 
-## Backend seam (Go + DB)
+## Backend integration (Go + Postgres)
 
-The site is fully static and needs no backend. The hooks for adding one later:
+The site is static and stays completely useful with the backend down. The API
+powers *optional fragments* only — never page content. `openapi.yaml` in the
+backend repository is the contract; `src/lib/api-contract.ts` is its
+transcription.
 
-- **`src/lib/api.ts`** — `API_BASE` (from `PUBLIC_API_BASE_URL`) and
-  `apiConfigured()`. Documents the intended pattern and a commented example.
-- **`.env`** — set `PUBLIC_API_BASE_URL` to enable. There is no committed
-  `.env.example`: `.gitignore` matches `*.env*`. See the environment variable
-  table in [Quick start](#quick-start).
-- **UI markers** — `{/* gap: ... */}` comments mark the spots meant to become
-  dynamic: blog view counts/comments, project demo/status. Footer uptime is
-  one of these too — the fabricated "uptime 99.4% · build #1284" string was
-  removed and replaced with a real build date, so there is nothing misleading
-  sitting there while the backend does not exist.
+### The layers
 
-**Intended pattern: HTMX.** Go returns HTML *fragments*, swapped into the page —
-so most dynamic features stay serverside with little/no client JS, consistent
-with the rest of the site. Example flow:
+| Module | Job |
+|---|---|
+| `src/lib/api-contract.ts` | Types, runtime validators, and the documented limits. No `fetch`, no `import.meta.env` — so it unit-tests under plain `node --test`. |
+| `src/lib/api.ts` | `apiRequest()`: base URL, timeout, cancellation, error mapping, response validation. **The only place `fetch` is called.** A test enforces that. |
+| `src/lib/health.ts` | `/healthz`, `/readyz`. |
+| `src/lib/comments.ts` | `listComments`, `createComment`. |
+| `src/lib/views.ts` | `recordView`. Separate from comments so the eager view beacon does not pull the comment client into its chunk. |
 
-```html
-<span hx-get="/api/uptime" hx-trigger="load, every 60s">uptime …</span>
-```
-```go
-// Go returns the fragment text, not JSON
-func uptime(w http.ResponseWriter, r *http.Request) { w.Write([]byte(liveUptime())) }
-```
+`apiRequest` always rejects with an `ApiError` carrying a `kind`
+(`network` / `timeout` / `http` / `malformed`), so call sites branch on that
+rather than on message text. **A 2xx whose body fails its validator is treated
+as a failure** — unvalidated network data never reaches a page.
 
-**Suggested first step:** move the reviews collection (the most row-like
-frontmatter) behind a Go+Postgres endpoint, and change only `getReviews()` /
-`getReview()` in `src/lib/content.ts` to fetch it. That proves the seam
-end-to-end.
+Timeout is `REQUEST_TIMEOUT_MS` (8s). Requests send `credentials: "omit"`:
+every endpoint in the spec is public, and sending credentials to a public API
+is a way to leak them.
+
+### Deployment prerequisite
+
+`PUBLIC_API_BASE_URL=/api` is **same-origin**, so something must route `/api`
+to the Go service. `nginx.conf` in this repository does **not** proxy it — the
+k3s ingress is expected to. Until that routing exists, every fragment shows its
+unavailable state and the rest of the site is unaffected.
+
+`PUBLIC_API_BASE_URL` is read at **build** time and baked into the output. It
+is `PUBLIC_*`, so it ships to the browser and must never hold a secret.
+
+> ⚠ **Windows/Git Bash:** `PUBLIC_API_BASE_URL=/api npm run build` in Git Bash
+> silently bakes `C:/Program Files/Git/api` — MSYS rewrites values that look
+> like Unix paths. Build from PowerShell, or set `MSYS_NO_PATHCONV=1`.
+
+### Comments (FEAT-204)
+
+Rendered on blog posts by `src/components/astro/Comments.astro`; the UI lives
+in `src/features/comments/mount.ts`.
+
+- The static page ships **only a shell** — heading, reserved status and list
+  regions, and a `<noscript>` note. No form, no pre-rendered comments.
+- The form is built by script because the API takes JSON; a plain HTML form
+  could not submit to it, and a form that cannot work is worse than none.
+- `mount.ts` is **dynamically imported** when the section nears the viewport,
+  so a reader who never scrolls that far downloads neither it nor the request.
+- Set `comments: false` in a post's frontmatter to close comments on it.
+
+**The rendering rule:** comment bodies and author names are untrusted input
+echoed back to every reader. They are only ever written with `textContent` —
+never `innerHTML`. `test/comments.test.mjs` fails the build if any
+HTML-writing sink appears in `mount.ts`. Do not relax this.
+
+**Abuse controls.** The backend owns all of them: rate limiting, the
+visible-comment cap behind the `409`, and the honeypot. The frontend renders a
+`website` field that is hidden from sight, hidden from assistive tech
+(`aria-hidden`) and skipped by Tab, so only a script fills it. On a honeypot
+submission the server answers `204` and stores nothing, and the UI shows the
+**same** "Posted." message as a real success — telling a spammer their comment
+was discarded is how a honeypot stops working.
+
+**Client-side validation is a courtesy, not a control.** `validateComment()`
+mirrors the server's limits so a mistake lands next to the field instead of
+coming back as a 400. The server stays authoritative.
+
+**Privacy.** The frontend sets no cookie, stores nothing in `localStorage` for
+comments, and sends no identifier. The only data leaving the browser is what
+the reader typed. Anything the server records to deduplicate views (IP, a hash,
+a window) is the backend's to define and document.
+
+### Views
+
+`POST /posts/{slug}/view`, fired once per page load after a **5 second dwell**,
+paused while the tab is hidden, and abandoned on `pagehide`. The server
+deduplicates per visitor per rolling window, so a refresh does not inflate it.
+
+There is deliberately **no view count displayed**: the spec defines a write
+endpoint but no endpoint that reads a count back. `ViewCounter.astro` is where
+that number would go once one exists.
+
+### Not built, and why
+
+`FEATURES.md` FEAT-202 (server-backed reviews) and FEAT-203 (server-backed
+blog/project reads) are **not started**. `openapi.yaml` defines no endpoint
+that returns reviews, posts or projects, and the milestone's own rule is not to
+begin an item until its endpoint and response shape are agreed. Content
+continues to come from MDX through `src/lib/content.ts`, which remains the seam
+those features would change.
 
 ---
 

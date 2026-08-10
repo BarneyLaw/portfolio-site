@@ -1,0 +1,96 @@
+---
+import { apiConfigured } from "../../lib/api";
+
+interface Props {
+  /** Post slug — the `{slug}` path parameter the API keys comments on. */
+  slug: string;
+  /** False when the post closes comments. Renders nothing. */
+  enabled?: boolean;
+}
+
+const { slug, enabled = true } = Astro.props;
+
+// Two build-time gates. Without a configured backend there is no endpoint to
+// talk to, so rendering an empty section (or worse, a form) would be the same
+// dead-end interaction this site spent Milestone 1 removing.
+const show = enabled && apiConfigured();
+---
+
+{
+  show && (
+    <section
+      class="mt-12 pt-8 border-t border-border"
+      data-comments
+      data-slug={slug}
+      aria-labelledby="comments-heading"
+    >
+      <h2 id="comments-heading" class="font-bold font-mono text-[18px] text-foreground mb-1">
+        comments
+      </h2>
+
+      {/* Everything below is built by the client module. The article above is
+          already complete and does not depend on any of it — a failure here
+          leaves the post exactly as it was. */}
+      <p class="text-[13px] font-mono text-muted-foreground mb-5">
+        Plain text only. Be decent.
+      </p>
+
+      {/* Reserved region. The status line sits above the list so an error or
+          a loading message appears in a fixed place instead of pushing the
+          rest of the page around as it changes. */}
+      <p
+        data-comments-status
+        class="text-[14px] font-mono text-muted-foreground min-h-[1.5rem]"
+        role="status"
+        aria-live="polite"
+      />
+
+      <ol data-comments-list class="flex flex-col gap-4 mt-2" />
+
+      <div data-comments-actions class="mt-4" />
+
+      <noscript>
+        <p class="text-[14px] font-mono text-muted-foreground">
+          Comments need JavaScript — they are loaded from the site's API after the
+          page renders. The post above is complete without them.
+        </p>
+      </noscript>
+    </section>
+  )
+}
+
+<script>
+  // Load the comment machinery only when the section is actually approaching
+  // the viewport. Most readers of a long post never scroll to the bottom, and
+  // this keeps both the module and its request off their page entirely.
+  const section = document.querySelector<HTMLElement>("[data-comments]");
+
+  if (section) {
+    const load = () => {
+      // Dynamic import: the comment code is not part of the page's initial
+      // script, so a reader who never reaches the section never downloads it.
+      import("../../features/comments/mount")
+        .then(({ mountComments }) => mountComments(section))
+        .catch(() => {
+          // A failed chunk load must not take the article with it.
+          const status = section.querySelector("[data-comments-status]");
+          if (status) status.textContent = "Comments could not be loaded.";
+        });
+    };
+
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          observer.disconnect();
+          load();
+        },
+        // Start fetching just before the section is on screen.
+        { rootMargin: "300px" },
+      );
+      observer.observe(section);
+    } else {
+      load();
+    }
+  }
+</script>
