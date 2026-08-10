@@ -1,0 +1,36 @@
+---
+import type { BlogEntry } from "../../lib/content";
+
+interface Props {
+  posts: BlogEntry[];
+}
+
+const { posts } = Astro.props;
+
+// Shared by /blog and /blog/page/N so the two routes cannot drift apart.
+// Category and read time are plain text, not links: there are no category
+// archive routes yet (Milestone 5), and a label that looks like a link but
+// isn't is exactly the problem this milestone is removing.
+---
+
+<div class="flex flex-col divide-y divide-border">
+  {
+    posts.map((post) => (
+      <a
+        href={`/blog/${post.id}`}
+        class="block py-5 hover:bg-primary/5 -mx-2 px-2 rounded transition-colors group"
+      >
+        <div class="text-[12px] font-mono text-muted-foreground mb-2">
+          <time datetime={post.data.date}>{post.data.date}</time> · {post.data.readTime} ·{" "}
+          {post.data.category}
+        </div>
+        <div class="font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors mb-1.5">
+          {post.data.title}
+        </div>
+        <div class="text-[14px] font-mono text-muted-foreground leading-relaxed">
+          {post.data.excerpt}
+        </div>
+      </a>
+    ))
+  }
+</div>

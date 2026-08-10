@@ -1,0 +1,72 @@
+---
+import type { Page } from "../../lib/pagination";
+
+interface Props {
+  page: Page<unknown>;
+  /** Same mapping used to build the pages, so numbered links and the page's
+      own route can never be derived differently. */
+  pathFor: (pageNumber: number) => string;
+  /** Describes what is being paged, for assistive tech. */
+  label?: string;
+}
+
+const { page, pathFor, label = "Pagination" } = Astro.props;
+
+// Nothing to navigate: render no chrome at all rather than a row of dead
+// controls. This is the "absent state" the feature requires.
+const show = page.total > 1;
+const numbers = Array.from({ length: page.total }, (_, i) => i + 1);
+
+// Real links, not buttons: every page is its own static URL, so this works
+// with JavaScript disabled and each page is shareable and indexable.
+const LINK =
+  "w-8 h-8 text-[13px] font-mono rounded transition-colors grid place-items-center";
+const CURRENT = "bg-primary text-white";
+const OTHER =
+  "border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground";
+// The ends of the range render as inert text, so keyboard focus never lands
+// on a control that goes nowhere.
+const EDGE = "text-muted-foreground/40";
+---
+
+{
+  show && (
+    <nav class="flex justify-center items-center gap-2 mt-8" aria-label={label}>
+      {page.prev ? (
+        <a href={page.prev} rel="prev" class:list={[LINK, OTHER]} aria-label="Previous page">
+          ‹
+        </a>
+      ) : (
+        <span class:list={[LINK, EDGE]} aria-hidden="true">
+          ‹
+        </span>
+      )}
+
+      {numbers.map((n) =>
+        n === page.number ? (
+          <span
+            class:list={[LINK, CURRENT]}
+            aria-current="page"
+            aria-label={`Page ${n}, current page`}
+          >
+            {n}
+          </span>
+        ) : (
+          <a href={pathFor(n)} class:list={[LINK, OTHER]} aria-label={`Page ${n}`}>
+            {n}
+          </a>
+        ),
+      )}
+
+      {page.next ? (
+        <a href={page.next} rel="next" class:list={[LINK, OTHER]} aria-label="Next page">
+          ›
+        </a>
+      ) : (
+        <span class:list={[LINK, EDGE]} aria-hidden="true">
+          ›
+        </span>
+      )}
+    </nav>
+  )
+}
