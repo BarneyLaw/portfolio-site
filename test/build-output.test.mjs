@@ -607,8 +607,11 @@ test("theme bootstrap defaults to light", () => {
       /localStorage\.getItem\("theme"\)\s*===\s*"dark"/,
       `${routeOf(file)} is missing the pre-paint theme bootstrap`,
     );
-    // A prefers-color-scheme fallback would hand dark mode to first-time
-    // visitors on a dark-themed OS, which is the behaviour we removed.
+    // Light is the default for a first-time visitor by design, whatever their
+    // OS is set to — only an explicit choice turns dark on. A
+    // prefers-color-scheme fallback would quietly undo that, so it is banned
+    // outright rather than merely absent. Reversing this is a product
+    // decision: change the rule in FEATURES.md and this test together.
     assert.doesNotMatch(
       html,
       /prefers-color-scheme/,
