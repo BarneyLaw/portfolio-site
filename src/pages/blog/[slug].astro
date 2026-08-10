@@ -2,7 +2,9 @@
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import CodeCopy from "../../components/astro/CodeCopy.astro";
+import Comments from "../../components/astro/Comments.astro";
 import TableOfContents from "../../components/astro/TableOfContents.astro";
+import ViewCounter from "../../components/astro/ViewCounter.astro";
 import { getBlogPosts, socialImageOf } from "../../lib/content";
 
 export async function getStaticPaths() {
@@ -45,7 +47,11 @@ const { Content, headings } = await render(post);
       <Content />
     </article>
 
-    {/* gap: view counts + comments (Go backend via src/lib/api.ts) go here */}
+    {/* Both are optional fragments over the Go API and render nothing when no
+        backend is configured at build time. The article above never waits on
+        either of them. */}
+    <ViewCounter slug={post.id} />
+    <Comments slug={post.id} enabled={post.data.comments} />
   </main>
 
   <CodeCopy />
