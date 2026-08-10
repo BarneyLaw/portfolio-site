@@ -12,6 +12,12 @@ COPY . .
 ARG PUBLIC_API_BASE_URL=/api
 ENV PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL}
 
+# Origin baked into canonical tags, the RSS feed and the sitemap. Left unset it
+# falls back to the production default in astro.config.mjs; set it when
+# building for a staging hostname so those URLs don't all point at production.
+ARG PUBLIC_SITE_ORIGIN=""
+ENV PUBLIC_SITE_ORIGIN=${PUBLIC_SITE_ORIGIN}
+
 RUN npm run check
 RUN npm run build
 
