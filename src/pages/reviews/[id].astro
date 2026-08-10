@@ -2,7 +2,7 @@
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import VerdictBadge from "../../components/astro/VerdictBadge.astro";
-import { getReviews, getReview } from "../../lib/content";
+import { getReviews, socialImageOf } from "../../lib/content";
 
 export async function getStaticPaths() {
   const reviews = await getReviews();
@@ -17,7 +17,13 @@ const r = review.data;
 const { Content } = await render(review);
 ---
 
-<Layout title={r.name} description={r.excerpt}>
+<Layout
+  title={r.name}
+  description={r.excerpt}
+  image={socialImageOf(review)}
+  ogType="article"
+  publishedDate={r.date}
+>
   <main class="max-w-5xl mx-auto px-6 py-12">
     <a
       href="/reviews"

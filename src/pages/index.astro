@@ -31,6 +31,10 @@ const topProject = projects[0];
 const topPost = posts.find((p) => p.id !== featured?.id);
 const topReview = reviews[0];
 
+// Cover art on these cards is decorative: the headline and subtitle right
+// beside it already say what the card is, so describing the artwork as well
+// just makes a screen reader read the same thing twice. alt="" unless the
+// entry deliberately supplies coverArtAlt.
 const recent = [
   topProject && {
     tag: "PROJECT",
@@ -39,9 +43,7 @@ const recent = [
     sub: topProject.data.meta,
     muted: false,
     coverArt: topProject.data.coverArt,
-    coverAlt:
-      topProject.data.imageAlt ??
-      `${topProject.data.name} project cover art`,
+    coverAlt: topProject.data.coverArtAlt ?? "",
   },
 
   topPost && {
@@ -51,9 +53,7 @@ const recent = [
     sub: `${topPost.data.date} · ${topPost.data.readTime} · ${topPost.data.category}`,
     muted: true,
     coverArt: topPost.data.coverArt,
-    coverAlt:
-      topPost.data.imageAlt ??
-      `${topPost.data.title} article cover art`,
+    coverAlt: topPost.data.coverArtAlt ?? "",
   },
 
   topReview && {
@@ -63,9 +63,7 @@ const recent = [
     sub: topReview.data.excerpt,
     muted: true,
     coverArt: topReview.data.coverArt,
-    coverAlt:
-      topReview.data.imageAlt ??
-      `${topReview.data.name} review cover art`,
+    coverAlt: topReview.data.coverArtAlt ?? "",
   },
 ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 
@@ -123,12 +121,8 @@ const navCards = ["projects", "blog", "reviews"];
             featured.data.coverArt ? (
               <Image
                 src={featured.data.coverArt}
-                alt={
-                  featured.data.imageAlt ??
-                  `${featured.data.title} cover art`
-                }
-                width={224}
-                height={160}
+                alt={featured.data.coverArtAlt ?? ""}
+                loading="eager"
                 class="w-28 h-20 flex-none rounded object-cover"
               />
             ) : (
@@ -169,8 +163,6 @@ const navCards = ["projects", "blog", "reviews"];
                 <Image
                   src={item.coverArt}
                   alt={item.coverAlt}
-                  width={112}
-                  height={112}
                   class="w-14 h-14 flex-none rounded object-cover"
                 />
               ) : (

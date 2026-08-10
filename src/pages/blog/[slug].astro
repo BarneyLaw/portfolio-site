@@ -1,7 +1,7 @@
 ---
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
-import { getBlogPosts } from "../../lib/content";
+import { getBlogPosts, socialImageOf } from "../../lib/content";
 
 export async function getStaticPaths() {
   const posts = await getBlogPosts();
@@ -12,7 +12,13 @@ const { post } = Astro.props;
 const { Content } = await render(post);
 ---
 
-<Layout title={post.data.title} description={post.data.excerpt}>
+<Layout
+  title={post.data.title}
+  description={post.data.excerpt}
+  image={socialImageOf(post)}
+  ogType="article"
+  publishedDate={post.data.date}
+>
   <main class="max-w-5xl mx-auto px-6 py-12">
     <a
       href="/blog"
