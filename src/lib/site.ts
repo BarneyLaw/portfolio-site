@@ -11,9 +11,11 @@
 //     externalLinkAttrs() so it cannot reach back through window.opener.
 //   - Nothing here is a secret. This module is compiled into public HTML.
 
-/** Production origin. No trailing slash. Also the base for canonical/feed URLs
-    — keep it in sync with `site` in astro.config.mjs, which imports this. */
-export const SITE_ORIGIN = "https://packetcraft.dev";
+/** Production origin, no trailing slash — the base for canonical tags, the RSS
+    feed and the sitemap. Owned and validated by `site` in astro.config.mjs
+    (override with PUBLIC_SITE_ORIGIN); Astro injects it here, so there is
+    exactly one definition and nothing to keep in sync. */
+export const SITE_ORIGIN: string = import.meta.env.SITE;
 
 export const SITE = {
   /** Wordmark / feed title. */
@@ -30,6 +32,9 @@ export const SITE = {
     address, not a personal one, so publishing it in plain HTML is acceptable.
     Swap to a contact form only if a backend ever makes that worthwhile. */
 export const CONTACT_EMAIL = "leifsen.work@gmail.com";
+
+/** RSS feed of published blog posts, emitted by src/pages/rss.xml.ts. */
+export const FEED_PATH = "/rss.xml";
 
 export interface SiteLink {
   label: string;
@@ -56,6 +61,7 @@ export const ELSEWHERE_LINKS: readonly SiteLink[] = [
   { label: "github", href: "https://github.com/BarneyLaw" },
   { label: "linkedin", href: "https://www.linkedin.com/in/leifsenlaw/" },
   { label: "email", href: `mailto:${CONTACT_EMAIL}` },
+  { label: "rss", href: FEED_PATH },
 ] as const;
 
 /** True for links that leave the site in a new browsing context. `mailto:`
