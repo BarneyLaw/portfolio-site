@@ -43,11 +43,28 @@ const routeOf = (file) =>
 
 const routes = new Set(htmlFiles.map(routeOf));
 
-/** Slugs of a content collection, taken from its .mdx filenames. */
-const slugsIn = (collection) =>
+/** Today in YYYY-MM-DD, matching the BUILD_DATE rule in src/lib/content.ts. */
+const today = new Date().toISOString().slice(0, 10);
+
+/**
+ * Entries of a content collection, read straight from the .mdx frontmatter.
+ * Deliberately a dumb scanner rather than an import of src/lib/content.ts:
+ * these tests check what the *build actually emitted* against what the source
+ * files say, so sharing the implementation would make the check circular.
+ */
+const entriesIn = (collection) =>
   readdirSync(join(contentDir, collection))
     .filter((f) => f.endsWith(".mdx"))
-    .map((f) => f.replace(/\.mdx$/, ""));
+    .map((f) => {
+      const slug = f.replace(/\.mdx$/, "");
+      const frontmatter = readFileSync(join(contentDir, collection, f), "utf8").split(
+        /^---$/m,
+      )[1];
+      const date = frontmatter.match(/^date:\s*"?(\d{4}-\d{2}-\d{2})"?/m)?.[1];
+      const draft = /^draft:\s*true\b/m.test(frontmatter);
+      // Mirrors the publication rules documented in src/lib/content.ts.
+      return { slug, date, draft, published: !draft && (date === undefined || date <= today) };
+    });
 
 test("emits the top-level routes", () => {
   for (const route of ["/", "/about", "/blog", "/projects", "/reviews"]) {
@@ -55,15 +72,36 @@ test("emits the top-level routes", () => {
   }
 });
 
-test("emits a page for every content entry", () => {
+test("emits a page for every published content entry", () => {
   for (const collection of ["blog", "projects", "reviews"]) {
-    const slugs = slugsIn(collection);
-    assert.ok(slugs.length > 0, `no .mdx entries found in src/content/${collection}`);
-    for (const slug of slugs) {
+    const entries = entriesIn(collection);
+    assert.ok(entries.length > 0, `no .mdx entries found in src/content/${collection}`);
+    for (const { slug } of entries.filter((e) => e.published)) {
       assert.ok(
         routes.has(`/${collection}/${slug}`),
         `src/content/${collection}/${slug}.mdx did not produce /${collection}/${slug}`,
       );
+    }
+  }
+});
+
+test("drafts and future-dated entries never reach the build", () => {
+  for (const collection of ["blog", "projects", "reviews"]) {
+    for (const { slug, draft, date } of entriesIn(collection).filter((e) => !e.published)) {
+      const why = draft ? "is a draft" : `is dated ${date}, in the future`;
+      assert.ok(
+        !routes.has(`/${collection}/${slug}`),
+        `/${collection}/${slug} was emitted but ${why}`,
+      );
+      // A withheld entry must not be linked from anywhere either, or the
+      // internal-link test below would be the only thing catching it.
+      for (const file of htmlFiles) {
+        assert.doesNotMatch(
+          readFileSync(file, "utf8"),
+          new RegExp(`href="/${collection}/${slug}/?"`),
+          `${routeOf(file)} links to /${collection}/${slug}, which ${why}`,
+        );
+      }
     }
   }
 });
