@@ -1,19 +1,19 @@
 ---
 import YorhaPixel from "./YorhaPixel.astro";
+import {
+  SITE,
+  FOOTER_SITE_LINKS,
+  ELSEWHERE_LINKS,
+  externalLinkAttrs,
+  isExternal,
+} from "../../lib/site";
 
-const siteLinks = [
-  { label: "Home", href: "/" },
-  { label: "Projects", href: "/projects" },
-  { label: "Blog", href: "/blog" },
-  { label: "Reviews", href: "/reviews" },
-  { label: "About", href: "/about" },
-];
-
-const elsewhere = [
-  { label: "github ↗", href: "https://github.com/BarneyLaw" },
-  { label: "linkedin ↗", href: "https://www.linkedin.com/in/leifsenlaw/" },
-];
-
+// Build stamp. The line this replaced read "uptime 99.4% · build #1284", which
+// was invented — neither number came from anywhere. A build date is something
+// we actually know at build time. Live uptime is a backend concern (FEAT-204).
+const built = new Date();
+const buildDate = built.toISOString().slice(0, 10);
+const year = built.getUTCFullYear();
 ---
 
 <footer class="bg-secondary border-t border-border">
@@ -27,19 +27,21 @@ const elsewhere = [
             &gt;_
           </div>
           <div class="flex flex-col leading-[1.05]">
-            <span class="font-bold font-mono text-foreground text-[16px]">packetcraft</span>
-            <span class="font-mono text-muted-foreground text-[12px]">.dev</span>
+            <span class="font-bold font-mono text-foreground text-[16px]">{SITE.name}</span>
+            <span class="font-mono text-muted-foreground text-[12px]"
+              >.{SITE.domain.split(".").pop()}</span
+            >
           </div>
         </a>
         <p class="text-[14px] font-mono text-muted-foreground mt-3 leading-[1.6]">
-          tinkerer documenting homelab builds, networking experiments, and gaming-adjacent projects.
+          {SITE.description}
         </p>
       </div>
       <div>
         <div class="text-[12px] font-mono text-muted-foreground mb-3">/site</div>
         <div class="flex flex-col gap-1.5">
           {
-            siteLinks.map((l) => (
+            FOOTER_SITE_LINKS.map((l) => (
               <a
                 href={l.href}
                 class="text-[14px] font-mono text-foreground/60 hover:text-foreground cursor-pointer transition-colors"
@@ -54,14 +56,21 @@ const elsewhere = [
         <div class="text-[12px] font-mono text-muted-foreground mb-3">/elsewhere</div>
         <div class="flex flex-col gap-1.5">
           {
-            elsewhere.map((link) => (
+            ELSEWHERE_LINKS.map((link) => (
               <a
                 href={link.href}
                 class="text-[14px] font-mono text-foreground/60 hover:text-foreground transition-colors"
-                target={link.href.startsWith("http") ? "_blank" : undefined}
-                rel={link.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                {...externalLinkAttrs(link.href)}
               >
                 {link.label}
+                {/* The arrow is decoration; the parenthetical is what a screen
+                    reader announces in its place. */}
+                {isExternal(link.href) && (
+                  <>
+                    <span aria-hidden="true"> ↗</span>
+                    <span class="sr-only"> (opens in a new tab)</span>
+                  </>
+                )}
               </a>
             ))
           }
@@ -75,13 +84,13 @@ const elsewhere = [
     </div>
     <div class="mt-6 pt-4 border-t border-border flex justify-between">
       <span class="text-[13px] font-mono text-muted-foreground">
-        © 2026 packetcraft · served by k3s @ home
+        © {year} {SITE.name} · served by k3s @ home
       </span>
       <span class="text-[13px] font-mono text-muted-foreground" style="color: #b0abab;">
         AUDENTES FORTUNA IUVAT
       </span>
       <span class="text-[13px] font-mono text-muted-foreground">
-        uptime 99.4% · build #1284
+        built <time datetime={buildDate}>{buildDate}</time>
       </span>
     </div>
   </div>
