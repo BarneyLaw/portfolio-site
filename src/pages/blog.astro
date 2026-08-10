@@ -1,10 +1,10 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Hatch from "../components/astro/Hatch.astro";
-import { getBlogPosts } from "../lib/content";
+import { getBlogPosts, getFeaturedPost } from "../lib/content";
 
-const posts = await getBlogPosts();
-const featured = posts.find((p) => p.data.featured) ?? posts[0];
+// Same featured rule as the home page — it lives in src/lib/content.ts so the
+// two pages cannot disagree about which post is the hero.
+const [posts, featured] = await Promise.all([getBlogPosts(), getFeaturedPost()]);
 const rest = posts.filter((p) => p.id !== featured?.id);
 ---
 

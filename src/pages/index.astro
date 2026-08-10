@@ -5,17 +5,31 @@ import Layout from "../layouts/Layout.astro";
 import Cursor from "../components/astro/Cursor.astro";
 import Hatch from "../components/astro/Hatch.astro";
 import Tag from "../components/astro/Tag.astro";
-import Sprite from "../components/astro/Sprite.astro";
-import { getProjects, getBlogPosts, getReviews } from "../lib/content";
+import {
+  getProjects,
+  getBlogPosts,
+  getReviews,
+  getFeaturedPost,
+} from "../lib/content";
 
 // The feed is built from the collections rather than hand-written, so every
 // card links to a page that exists and the copy can't drift from the source.
-const posts = await getBlogPosts();
-const featured = posts.find((p) => p.data.featured) ?? posts[0];
+// Selection and ordering rules (drafts, future dates, the featured rule, tie
+// breaking) all live in src/lib/content.ts — this page only decides layout.
+const [posts, featured, projects, reviews] = await Promise.all([
+  getBlogPosts(),
+  getFeaturedPost(),
+  getProjects(),
+  getReviews(),
+]);
 
-const topProject = (await getProjects())[0];
+// One card per content type, each the newest of its kind. The blog slot skips
+// whatever is already in the hero above so the page never shows it twice.
+// Any of these may be undefined when a collection is empty; the filter below
+// drops the empty slots rather than rendering a card that links nowhere.
+const topProject = projects[0];
 const topPost = posts.find((p) => p.id !== featured?.id);
-const topReview = (await getReviews())[0];
+const topReview = reviews[0];
 
 const recent = [
   topProject && {
@@ -175,12 +189,6 @@ const navCards = ["projects", "blog", "reviews"];
           </a>
         ))
       }
-      <!-- <div class="flex items-center gap-2 pt-2 px-1">
-        <Sprite size={44} />
-        <span class="text-[13px] font-mono text-muted-foreground">
-          fetching more…
-        </span>
-      </div> -->
     </div>
 
     {/* Quick nav cards */}

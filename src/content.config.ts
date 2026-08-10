@@ -6,16 +6,28 @@ import { glob } from "astro/loaders";
 // structured fields and the body for the writeup. See src/lib/content.ts for
 // the seam where these can later be swapped for a Go/Postgres-backed query.
 
+/** ISO calendar date. Validated so lexicographic sort == chronological sort,
+    which is what every "newest first" ordering in src/lib/content.ts relies on,
+    and what lets a future-dated entry be detected with a string compare. */
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be an ISO calendar date, e.g. 2026-07-26");
+
+/** Withheld from the public build entirely: no list entry, no detail route.
+    See the publication rules in src/lib/content.ts. */
+const draft = z.boolean().default(false);
+
 const blog = defineCollection({
   loader: glob({ pattern: "**/*.mdx", base: "./src/content/blog" }),
   schema: ({ image }) =>
     z.object({
       title: z.string(),
-      date: z.string(),
+      date: isoDate,
       readTime: z.string(),
       category: z.string(),
       excerpt: z.string(),
       featured: z.boolean().default(false),
+      draft,
       image: image().optional(),
       coverArt: image().optional(),
       imageAlt: z.string().optional(),
@@ -33,6 +45,7 @@ const projects = defineCollection({
       description: z.string(),
       codeSnippet: z.string(),
       order: z.number().default(0),
+      draft,
       image: image().optional(),
       coverArt: image().optional(),
       imageAlt: z.string().optional(),
@@ -46,12 +59,13 @@ const reviews = defineCollection({
       type: z.enum(["HARDWARE", "SOFTWARE"]),
       verdict: z.enum(["RECOMMENDED", "MIXED", "PASS"]),
       name: z.string(),
-      date: z.string(),
+      date: isoDate,
       excerpt: z.string(),
+      draft,
       image: image().optional(),
       coverArt: image().optional(),
       imageAlt: z.string().optional(),
-  }),
+    }),
 });
 
 export const collections = { blog, projects, reviews };
