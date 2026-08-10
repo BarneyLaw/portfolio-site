@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 
+import { rehypeHeadingIds } from "@astrojs/markdown-remark";
+
+import { rehypeHeadingAnchors } from "./src/lib/rehype-heading-anchors.mjs";
+
 // ── Production origin ────────────────────────────────────────────────────
 // The one place the deployed origin is decided. Astro injects it as
 // `import.meta.env.SITE`, which src/lib/site.ts re-exports as SITE_ORIGIN, so
@@ -44,6 +48,28 @@ export default defineConfig({
   // don't need sharp-based image optimization.
   image: {
     service: { entrypoint: "astro/assets/services/noop" },
+  },
+
+  markdown: {
+    // @astrojs/mdx inherits this block, so MDX bodies get the same treatment.
+    //
+    // Astro assigns heading ids in its own rehype pass, which runs *after*
+    // these, so the anchor plugin would see no ids to link to. Running
+    // Astro's own rehypeHeadingIds first is the documented fix, and reuses
+    // the exact slugger Astro's `headings` list (and the table of contents)
+    // is built from — hand-rolling a slug here would eventually disagree.
+    rehypePlugins: [rehypeHeadingIds, rehypeHeadingAnchors],
+
+    // Shiki highlights at build time — no highlighter ships to the browser.
+    // Two themes are emitted at once: colours land as inline CSS custom
+    // properties and src/styles/content.css picks the dark set under `.dark`.
+    // defaultColor:false is what stops Shiki hardcoding the light colours and
+    // makes the variables authoritative.
+    shikiConfig: {
+      themes: { light: "github-light", dark: "github-dark" },
+      defaultColor: false,
+      wrap: false,
+    },
   },
 
   vite: {
