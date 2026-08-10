@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 
-import { rehypeHeadingIds } from "@astrojs/markdown-remark";
+import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 
 import { rehypeHeadingAnchors } from "./src/lib/rehype-heading-anchors.mjs";
 
@@ -53,12 +53,17 @@ export default defineConfig({
   markdown: {
     // @astrojs/mdx inherits this block, so MDX bodies get the same treatment.
     //
+    // Plugins hang off `processor: unified(...)`; the old top-level
+    // markdown.rehypePlugins is deprecated and warns on every build.
+    //
     // Astro assigns heading ids in its own rehype pass, which runs *after*
     // these, so the anchor plugin would see no ids to link to. Running
     // Astro's own rehypeHeadingIds first is the documented fix, and reuses
     // the exact slugger Astro's `headings` list (and the table of contents)
     // is built from — hand-rolling a slug here would eventually disagree.
-    rehypePlugins: [rehypeHeadingIds, rehypeHeadingAnchors],
+    processor: unified({
+      rehypePlugins: [rehypeHeadingIds, rehypeHeadingAnchors],
+    }),
 
     // Shiki highlights at build time — no highlighter ships to the browser.
     // Two themes are emitted at once: colours land as inline CSS custom
