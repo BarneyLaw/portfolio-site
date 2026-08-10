@@ -36,6 +36,23 @@ export const CONTACT_EMAIL = "leifsen.work@gmail.com";
 /** RSS feed of published blog posts, emitted by src/pages/rss.xml.ts. */
 export const FEED_PATH = "/rss.xml";
 
+/**
+ * Site-wide social card, used by any page that has no image of its own.
+ * Regenerate with `node scripts/make-og-card.mjs`.
+ *
+ * It lives in public/ rather than src/img/ so its URL stays stable: a
+ * fingerprinted path would change on every rebuild and invalidate the card on
+ * every link already shared. Being un-fingerprinted, it must also stay
+ * revalidatable — nginx only marks /_astro/ immutable, so this is fine.
+ *
+ * 1200x630 is the Open Graph reference size.
+ */
+export const DEFAULT_SOCIAL_IMAGE: { src: string; width: number; height: number } = {
+  src: "/og-default.png",
+  width: 1200,
+  height: 630,
+};
+
 export interface SiteLink {
   label: string;
   href: string;

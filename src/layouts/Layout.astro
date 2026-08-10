@@ -2,7 +2,7 @@
 import "../styles/index.css";
 import Nav from "../components/astro/Nav.astro";
 import Footer from "../components/astro/Footer.astro";
-import { SITE, FEED_PATH, absoluteUrl } from "../lib/site";
+import { SITE, FEED_PATH, DEFAULT_SOCIAL_IMAGE, absoluteUrl } from "../lib/site";
 
 // ── Page metadata contract ───────────────────────────────────────────────
 // Every route describes itself through these props and nothing else. Pages
@@ -16,9 +16,27 @@ interface Props {
   /** Canonical path, defaulting to this page's own URL. Set it only when a
       route is reachable at more than one path (e.g. paginated archives). */
   canonicalPath?: string;
+  /** Social card image. Content pages pass socialImageOf(entry); anything
+      unset falls back to the site-wide card in public/. */
+  image?: ImageMetadata;
+  /** Describes `image` for people who see the card but not the picture. */
+  imageAlt?: string;
+  /** "article" for a single dated piece of writing, "website" for everything
+      else. Drives og:type and whether a published time is emitted. */
+  ogType?: "website" | "article";
+  /** ISO date, only meaningful when ogType is "article". */
+  publishedDate?: string;
 }
 
-const { title, description = SITE.description, canonicalPath } = Astro.props;
+const {
+  title,
+  description = SITE.description,
+  canonicalPath,
+  image,
+  imageAlt,
+  ogType = "website",
+  publishedDate,
+} = Astro.props;
 
 const pageTitle = title ? `${title} · ${SITE.name}` : SITE.name;
 // Astro's default directory build format means a page's own pathname already
@@ -27,6 +45,23 @@ const pageTitle = title ? `${title} · ${SITE.name}` : SITE.name;
 // advertising one identical URL per page. Don't "tidy" the slash off here —
 // that is exactly what makes them disagree.
 const canonical = absoluteUrl(canonicalPath ?? Astro.url.pathname);
+
+// Social scrapers do not resolve relative URLs and mostly do not execute
+// JavaScript, so og:image must be absolute and present in the served HTML.
+// Entry images have gone through Astro's asset pipeline by this point, so
+// `.src` is the final hashed path and the intrinsic size is known — supplying
+// og:image:width/height lets a scraper lay the card out without fetching it.
+const socialImage = image ?? DEFAULT_SOCIAL_IMAGE;
+const socialImageUrl = absoluteUrl(socialImage.src);
+const socialImageAlt =
+  imageAlt ?? (image ? `Cover image for ${title ?? SITE.name}` : `${SITE.name} — ${SITE.description}`);
+
+// Twitter picks the card layout from this value, not from the image, so a
+// square picture in a large-image card gets letterboxed. Pick by aspect ratio:
+// the 1200x630 default and wide cover art earn the big card, square art does
+// not. 1.5 is comfortably below the 1.91:1 the large card is designed around.
+const twitterCard =
+  socialImage.width / socialImage.height >= 1.5 ? "summary_large_image" : "summary";
 ---
 
 <!doctype html>
@@ -45,6 +80,29 @@ const canonical = absoluteUrl(canonicalPath ?? Astro.url.pathname);
     />
     <link rel="sitemap" type="application/xml" href="/sitemap-index.xml" />
     <title>{pageTitle}</title>
+
+    {/* Open Graph. Consumed by Slack, Discord, iMessage, Mastodon, LinkedIn. */}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:width" content={String(socialImage.width)} />
+    <meta property="og:image:height" content={String(socialImage.height)} />
+    <meta property="og:image:alt" content={socialImageAlt} />
+    <meta property="og:locale" content="en_US" />
+    {
+      ogType === "article" && publishedDate && (
+        <meta property="article:published_time" content={`${publishedDate}T00:00:00Z`} />
+      )
+    }
+    {ogType === "article" && <meta property="article:author" content={SITE.author} />}
+
+    {/* Twitter/X reads og:* for the rest; these two are the ones it needs. */}
+    <meta name="twitter:card" content={twitterCard} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content={socialImageAlt} />
     <style is:global>
       html,
       body {
