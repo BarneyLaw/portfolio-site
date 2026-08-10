@@ -63,10 +63,12 @@ const show = enabled && apiConfigured();
   // Load the comment machinery only when the section is actually approaching
   // the viewport. Most readers of a long post never scroll to the bottom, and
   // this keeps both the module and its request off their page entirely.
+  import { whenVisible } from "../../lib/when-visible";
+
   const section = document.querySelector<HTMLElement>("[data-comments]");
 
   if (section) {
-    const load = () => {
+    whenVisible(section, () => {
       // Dynamic import: the comment code is not part of the page's initial
       // script, so a reader who never reaches the section never downloads it.
       import("../../features/comments/mount")
@@ -76,21 +78,6 @@ const show = enabled && apiConfigured();
           const status = section.querySelector("[data-comments-status]");
           if (status) status.textContent = "Comments could not be loaded.";
         });
-    };
-
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          if (!entries.some((entry) => entry.isIntersecting)) return;
-          observer.disconnect();
-          load();
-        },
-        // Start fetching just before the section is on screen.
-        { rootMargin: "300px" },
-      );
-      observer.observe(section);
-    } else {
-      load();
-    }
+    });
   }
 </script>

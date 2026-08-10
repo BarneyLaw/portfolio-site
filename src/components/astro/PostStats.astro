@@ -1,0 +1,52 @@
+---
+import { apiConfigured } from "../../lib/api";
+
+interface Props {
+  /** Post slug — the `{slug}` path parameter the API keys stats on. */
+  slug: string;
+}
+
+const { slug } = Astro.props;
+
+// No backend configured at build time means no totals to show and nothing to
+// like, so emit nothing rather than a row that can only fail.
+const show = apiConfigured();
+---
+
+{
+  show && (
+    /* The row reserves its height here so filling it in never pushes the
+       comments below it around. Numbers and the like button are built by the
+       client module — a like button in static HTML would be a control that
+       does nothing without JavaScript. */
+    <div
+      class="mt-8 flex items-center gap-3 flex-wrap min-h-[2rem]"
+      data-post-stats
+      data-slug={slug}
+    >
+      <p
+        data-post-stats-status
+        class="text-[13px] font-mono text-muted-foreground"
+        role="status"
+        aria-live="polite"
+      />
+    </div>
+  )
+}
+
+<script>
+  import { whenVisible } from "../../lib/when-visible";
+
+  const root = document.querySelector<HTMLElement>("[data-post-stats]");
+
+  if (root) {
+    whenVisible(root, () => {
+      import("../../features/post-stats/mount")
+        .then(({ mountPostStats }) => mountPostStats(root))
+        .catch(() => {
+          const status = root.querySelector("[data-post-stats-status]");
+          if (status) status.textContent = "Stats are unavailable right now.";
+        });
+    });
+  }
+</script>

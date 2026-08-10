@@ -9,9 +9,10 @@ A personal site (blog · reviews · portfolio · project showcase) built to ship
 - **Client JS:** none from a framework. A few hundred bytes of hand-written
   vanilla script per page (theme toggle, list filters, nav mascot, copy-code),
   all progressive enhancement.
-- **Backend:** optional. A Go + Postgres API powers comments and view recording
-  on blog posts; everything else is static and the site stays fully usable with
-  it down (see [Backend integration](#backend-integration-go--postgres)).
+- **Backend:** optional, and never a source of content. A Go + Postgres API
+  powers comments, view recording and likes on blog posts; published content is
+  repository-backed and the site stays fully usable with the backend down (see
+  [Backend integration](#backend-integration-go--postgres)).
 
 The site began as a Figma Make export (a single ~900-line React `App.tsx`) and
 was migrated to this stack in phases. See [Migration history](#migration-history).
@@ -70,6 +71,7 @@ bootstrap is `is:inline` (it has to run before first paint).
 | Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling `hidden`; unfiltered without JS |
 | Copy-code buttons | `src/components/astro/CodeCopy.astro` | Injects a copy button into each `.mdx-content pre`; nothing renders without JS |
 | Comments (blog posts) | `src/components/astro/Comments.astro` → `src/features/comments/mount.ts` | Dynamically imported when the section nears the viewport; builds the list and form |
+| Stats + likes (blog posts) | `src/components/astro/PostStats.astro` → `src/features/post-stats/mount.ts` | Same lazy trigger; fetches totals once and owns the like button |
 | View beacon (blog posts) | `src/components/astro/ViewCounter.astro` | Records one view after a 5s dwell; imports the API client only at that point |
 
 That's the complete client-side JS inventory. Everything else — pagination,
@@ -87,7 +89,8 @@ chosen. Change publication behaviour there, not in a page.
 
 ## Testing
 
-One command, three suites, all asserting on the real `dist/` output:
+One command, seven suites. Most assert on the real `dist/` output; two import
+the TypeScript source directly (Node strips the types, so no build step).
 
 | Suite | Covers |
 |---|---|
@@ -96,7 +99,8 @@ One command, three suites, all asserting on the real `dist/` output:
 | `test/served-site.test.mjs` | HTTP behaviour: clean URLs, 404s, MIME types, cache policy |
 | `test/api-contract.test.mjs` | The validators guarding the network boundary — imports the TypeScript source directly (Node strips the types) |
 | `test/api-transport.test.mjs` | `apiRequest` against a real local server: timeout, cancellation, error mapping, and that a 2xx failing its validator is rejected |
-| `test/comments.test.mjs` | The XSS rule in `mount.ts`, that only `api.ts` calls `fetch`, and the shipped comment shell |
+| `test/comments.test.mjs` | The XSS rule across every feature module, that only `api.ts` calls `fetch`, and the shipped comment and stats shells |
+| `test/content-contract.test.mjs` | FEAT-202: pages never import an API module or call `getCollection`, no migration or content table exists, and every detail route carries its body in the HTML |
 
 There is no browser and no browser dependency. `test/served-site.test.mjs`
 re-implements the `try_files` rule from `nginx.conf` over `node:http`; the
@@ -159,9 +163,12 @@ portfolio-site/
 │   │   ├── api.ts              # ★ The only place fetch() hits the API
 │   │   ├── api-contract.ts     # ★ Types + runtime validators from openapi.yaml
 │   │   ├── comments.ts         #   listComments / createComment
-│   │   └── views.ts            #   recordView (split so the beacon stays small)
+│   │   ├── views.ts            #   recordView (split so the beacon stays small)
+│   │   ├── stats.ts            #   getPostStats / setPostLiked + local like memory
+│   │   └── when-visible.ts     #   shared "load when it scrolls near" trigger
 │   ├── features/
-│   │   └── comments/mount.ts   # ⚠ client-only comment UI, dynamically imported
+│   │   ├── comments/mount.ts   # ⚠ client-only comment UI, dynamically imported
+│   └── post-stats/mount.ts # ⚠ client-only totals + like button
 │   ├── styles/
 │   │   ├── index.css           # Entry: imports the five below
 │   │   ├── fonts.css           # IBM Plex Mono @import + @keyframes blink / scan
@@ -476,6 +483,19 @@ powers *optional fragments* only — never page content. `openapi.yaml` in the
 backend repository is the contract; `src/lib/api-contract.ts` is its
 transcription.
 
+### The content boundary is not negotiable
+
+Published blog, project and review content is **repository-backed**: MDX files,
+validated by content collection schemas, rendered at build time. There is no
+content table, no synchronisation job, and no migration. Publishing is "edit a
+file, rebuild".
+
+The Go API is only for what cannot be a repository file — comments, views,
+likes. `test/content-contract.test.mjs` enforces this: a page may not import an
+API module or call `getCollection` directly, every detail route must carry its
+body in the emitted HTML, and the build may not fetch. If you find yourself
+wanting an endpoint that returns posts, that is the contract telling you no.
+
 ### The layers
 
 | Module | Job |
@@ -483,6 +503,7 @@ transcription.
 | `src/lib/api-contract.ts` | Types, runtime validators, and the documented limits. No `fetch`, no `import.meta.env` — so it unit-tests under plain `node --test`. |
 | `src/lib/api.ts` | `apiRequest()`: base URL, timeout, cancellation, error mapping, response validation. **The only place `fetch` is called.** A test enforces that. |
 | `src/lib/comments.ts` | `listComments`, `createComment`. |
+| `src/lib/stats.ts` | `getPostStats`, `setPostLiked`, and the local like memory. |
 | `src/lib/views.ts` | `recordView`. Separate from comments so the eager view beacon does not pull the comment client into its chunk. |
 
 `apiRequest(path, options)` delegates to `requestFrom(base, path, options)`.
@@ -548,24 +569,51 @@ comments, and sends no identifier. The only data leaving the browser is what
 the reader typed. Anything the server records to deduplicate views (IP, a hash,
 a window) is the backend's to define and document.
 
-### Views
+### Views, likes and totals
 
-`POST /posts/{slug}/view`, fired once per page load after a **5 second dwell**,
-paused while the tab is hidden, and abandoned on `pagehide`. The server
-deduplicates per visitor per rolling window, so a refresh does not inflate it.
+Three separate things, deliberately in different modules:
 
-There is deliberately **no view count displayed**: the spec defines a write
-endpoint but no endpoint that reads a count back. `ViewCounter.astro` is where
-that number would go once one exists.
+| | Where | Behaviour |
+|---|---|---|
+| Recording a view | `ViewCounter.astro` → `src/lib/views.ts` | `POST /posts/{slug}/view` once per page load after a **5 second dwell**, paused while the tab is hidden, abandoned on `pagehide` |
+| Showing totals | `PostStats.astro` → `src/features/post-stats/mount.ts` | `GET /posts/{slug}/stats`, fetched **once** when the row comes into view |
+| Liking | same module | `PUT`/`DELETE /posts/{slug}/like` |
+
+**No polling anywhere.** Totals are a fetch-once-on-view number, not a live
+counter; a reader who wants a fresh figure reloads. The server deduplicates
+views per visitor per rolling window, so a refresh does not inflate anything.
+
+`views.ts` is split from `stats.ts` because the view beacon runs on every post
+while the stats row is lazily loaded — sharing a module would drag the stats
+code into the beacon's chunk for every reader.
+
+**The like button's state is local memory.** The API exposes aggregate totals
+and two idempotent state assertions (`PUT` = "I like this", `DELETE` = "I
+don't"), but nothing that answers *does this visitor already like it?* — the
+server identifies the visitor itself and the frontend cannot ask. So the
+pressed state comes from `localStorage` and can legitimately disagree with the
+server: clear storage, or open the post elsewhere, and the button shows
+unliked while your like still counts. That is harmless **because the endpoints
+assert a state rather than incrementing** — pressing like again sets the same
+state. Do not rewrite this as a `POST /like` counter without a per-visitor read.
+
+Likes update optimistically and roll back if the server refuses, and the row
+reserves its height so arriving numbers never push the comments down.
+
+**Privacy.** `like:<slug>` in `localStorage` is the only thing the comment and
+stats features store, and it never leaves the browser. No cookie is set and no
+identifier is sent. Whatever the server uses to deduplicate views and attribute
+likes is the backend's to define and document.
 
 ### Not built, and why
 
-`FEATURES.md` FEAT-202 (server-backed reviews) and FEAT-203 (server-backed
-blog/project reads) are **not started**. `openapi.yaml` defines no endpoint
-that returns reviews, posts or projects, and the milestone's own rule is not to
-begin an item until its endpoint and response shape are agreed. Content
-continues to come from MDX through `src/lib/content.ts`, which remains the seam
-those features would change.
+- **FEAT-203 — backend-powered project integrations.** Nothing selected. Each
+  integration is approved and built independently; there is no endpoint for one
+  yet.
+- **Milestone 3 — authenticated authoring.** Deferred by product decision. No
+  admin routes, no auth, no content CRUD.
+- **A view-count-only display without likes**, or any endpoint returning post
+  content — both would cross the content boundary above.
 
 ---
 

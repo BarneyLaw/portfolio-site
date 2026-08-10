@@ -18,6 +18,7 @@ import {
   isErrorBody,
   isComment,
   isCommentPage,
+  isPostStats,
   validateComment,
 } from "../src/lib/api-contract.ts";
 
@@ -108,6 +109,26 @@ test("isCommentPage validates the page and its cursor", () => {
     ],
   ]) {
     assert.ok(!isCommentPage(value), `${label} should be rejected`);
+  }
+});
+
+test("isPostStats requires non-negative whole counters", () => {
+  assert.ok(isPostStats({ views: 0, likes: 0 }));
+  assert.ok(isPostStats({ views: 4212, likes: 7 }));
+  assert.ok(isPostStats({ views: 1, likes: 1, shares: 3 }), "unknown fields are ignored");
+
+  for (const [label, value] of [
+    ["missing likes", { views: 1 }],
+    ["missing views", { likes: 1 }],
+    ["negative views", { views: -1, likes: 0 }],
+    ["negative likes", { views: 0, likes: -1 }],
+    ["fractional views", { views: 1.5, likes: 0 }],
+    ["string counter", { views: "12", likes: 0 }],
+    ["null counter", { views: null, likes: 0 }],
+    ["beyond safe integer range", { views: 2 ** 53, likes: 0 }],
+    ["not an object", 12],
+  ]) {
+    assert.ok(!isPostStats(value), `${label} should be rejected`);
   }
 });
 

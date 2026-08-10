@@ -3,6 +3,7 @@ import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import CodeCopy from "../../components/astro/CodeCopy.astro";
 import Comments from "../../components/astro/Comments.astro";
+import PostStats from "../../components/astro/PostStats.astro";
 import TableOfContents from "../../components/astro/TableOfContents.astro";
 import ViewCounter from "../../components/astro/ViewCounter.astro";
 import { getBlogPosts, socialImageOf } from "../../lib/content";
@@ -47,10 +48,12 @@ const { Content, headings } = await render(post);
       <Content />
     </article>
 
-    {/* Both are optional fragments over the Go API and render nothing when no
-        backend is configured at build time. The article above never waits on
-        either of them. */}
+    {/* Optional fragments over the Go API. All three render nothing when no
+        backend is configured at build time, and the article above never waits
+        on any of them. ViewCounter writes; PostStats reads and offers the
+        like control; Comments does both. */}
     <ViewCounter slug={post.id} />
+    <PostStats slug={post.id} />
     <Comments slug={post.id} enabled={post.data.comments} />
   </main>
 
