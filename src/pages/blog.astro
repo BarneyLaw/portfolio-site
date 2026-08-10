@@ -1,11 +1,20 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import PostList from "../components/astro/PostList.astro";
+import Pagination from "../components/astro/Pagination.astro";
 import { getBlogPosts, getFeaturedPost } from "../lib/content";
+import { paginate, BLOG_PAGE_SIZE, blogPagePath } from "../lib/pagination";
 
-// Same featured rule as the home page — it lives in src/lib/content.ts so the
-// two pages cannot disagree about which post is the hero.
+// Page 1 of the archive. Later pages live at /blog/page/N — see
+// src/pages/blog/page/[page].astro, which shares these components so the two
+// routes cannot present the list differently.
+//
+// Same featured rule as the home page; it lives in src/lib/content.ts so the
+// two pages cannot disagree about which post is the hero. The hero shows on
+// page 1 only, and is held out of the paged list so it never appears twice.
 const [posts, featured] = await Promise.all([getBlogPosts(), getFeaturedPost()]);
 const rest = posts.filter((p) => p.id !== featured?.id);
+const page = paginate(rest, { pageSize: BLOG_PAGE_SIZE, pathFor: blogPagePath })[0]!;
 ---
 
 <Layout title="blog">
@@ -20,7 +29,7 @@ const rest = posts.filter((p) => p.id !== featured?.id);
       featured && (
         <a
           href={`/blog/${featured.id}`}
-          class="block bg-card border border-border rounded overflow-hidden mb-8 hover:border-primary/50 transition-colors cursor-pointer group"
+          class="block bg-card border border-border rounded overflow-hidden mb-8 hover:border-primary/50 transition-colors group"
         >
           <div class="p-5">
             <div class="flex gap-2 items-center mb-3">
@@ -28,7 +37,8 @@ const rest = posts.filter((p) => p.id !== featured?.id);
                 FEATURED
               </span>
               <span class="text-[12px] font-mono text-muted-foreground">
-                {featured.data.date} · {featured.data.readTime} · {featured.data.category}
+                <time datetime={featured.data.date}>{featured.data.date}</time> ·{" "}
+                {featured.data.readTime} · {featured.data.category}
               </span>
             </div>
             <div class="font-bold font-mono text-[18px] text-foreground group-hover:text-primary transition-colors leading-snug mb-2">
@@ -42,44 +52,7 @@ const rest = posts.filter((p) => p.id !== featured?.id);
       )
     }
 
-    {/* List */}
-    <div class="flex flex-col divide-y divide-border">
-      {
-        rest.map((post) => (
-          <a
-            href={`/blog/${post.id}`}
-            class="block py-5 hover:bg-primary/5 -mx-2 px-2 rounded transition-colors cursor-pointer group"
-          >
-            <div class="text-[12px] font-mono text-muted-foreground mb-2">
-              {post.data.date} · {post.data.readTime} · {post.data.category}
-            </div>
-            <div class="font-bold font-mono text-[16px] text-foreground group-hover:text-primary transition-colors mb-1.5">
-              {post.data.title}
-            </div>
-            <div class="text-[14px] font-mono text-muted-foreground leading-relaxed">
-              {post.data.excerpt}
-            </div>
-          </a>
-        ))
-      }
-    </div>
-
-    {/* Pagination */}
-    <div class="flex justify-center gap-2 mt-8">
-      {
-        [1, 2, 3].map((n) => (
-          <button
-            class:list={[
-              "w-8 h-8 text-[13px] font-mono rounded cursor-pointer transition-colors",
-              n === 1
-                ? "bg-primary text-white"
-                : "border border-border text-muted-foreground hover:border-primary/40",
-            ]}
-          >
-            {n}
-          </button>
-        ))
-      }
-    </div>
+    <PostList posts={page.items} />
+    <Pagination page={page} pathFor={blogPagePath} label="Blog pages" />
   </main>
 </Layout>

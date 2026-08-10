@@ -1,0 +1,49 @@
+---
+import type { GetStaticPaths } from "astro";
+
+import Layout from "../../../layouts/Layout.astro";
+import PostList from "../../../components/astro/PostList.astro";
+import Pagination from "../../../components/astro/Pagination.astro";
+import { getBlogPosts, getFeaturedPost, type BlogEntry } from "../../../lib/content";
+import {
+  paginate,
+  BLOG_PAGE_SIZE,
+  blogPagePath,
+  type Page,
+} from "../../../lib/pagination";
+
+// getStaticPaths cannot infer prop types back into the component, so the
+// contract is declared here.
+interface Props {
+  page: Page<BlogEntry>;
+}
+
+// Pages 2..N of the blog archive. Page 1 is /blog itself, so it is skipped
+// here — emitting it would give the same list two URLs and split its
+// canonical. The list markup comes from the same components /blog uses.
+//
+// This lives under /blog/page/ rather than /blog/N because /blog/[slug]
+// already owns every single segment under /blog.
+export const getStaticPaths: GetStaticPaths = async () => {
+  const [posts, featured] = await Promise.all([getBlogPosts(), getFeaturedPost()]);
+  const rest = posts.filter((p) => p.id !== featured?.id);
+
+  return paginate(rest, { pageSize: BLOG_PAGE_SIZE, pathFor: blogPagePath })
+    .slice(1)
+    .map((page) => ({ params: { page: String(page.number) }, props: { page } }));
+};
+
+const { page } = Astro.props;
+---
+
+<Layout title={`blog · page ${page.number}`} description={`Blog archive, page ${page.number} of ${page.total}.`}>
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <h1 class="font-bold font-mono text-[32px] text-foreground mb-3">blog</h1>
+    <p class="text-[15px] font-mono text-muted-foreground mb-8">
+      page {page.number} of {page.total}
+    </p>
+
+    <PostList posts={page.items} />
+    <Pagination page={page} pathFor={blogPagePath} label="Blog pages" />
+  </main>
+</Layout>
