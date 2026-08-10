@@ -1,0 +1,98 @@
+---
+// Adds a "copy" button to every fenced code block inside `.mdx-content`.
+//
+// Strictly progressive enhancement: the button does not exist in the HTML. It
+// is created by this script, so a reader with JavaScript disabled sees a
+// normal code block rather than a button that does nothing. Nothing else on
+// the page depends on it.
+//
+// Drop this component on any route that renders MDX. It is scoped to
+// `.mdx-content pre`, so it cannot touch the terminal snippets or any other
+// <pre> in the site chrome.
+---
+
+<script>
+  const CLIPBOARD = navigator.clipboard;
+  // No clipboard API (or a non-secure context) means no useful button.
+  if (CLIPBOARD) {
+    const blocks = document.querySelectorAll<HTMLPreElement>(".mdx-content pre");
+
+    for (const pre of blocks) {
+      // Shiki writes the code into a <code> child; fall back to the block.
+      const source = pre.querySelector("code") ?? pre;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "copy";
+      button.className = "code-copy";
+      button.setAttribute("aria-label", "Copy code to clipboard");
+
+      let resetTimer: ReturnType<typeof setTimeout> | undefined;
+      const flash = (message: string) => {
+        button.textContent = message;
+        // Replace any in-flight reset so rapid clicks cannot leave the label
+        // stuck on "copied".
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          button.textContent = "copy";
+        }, 1600);
+      };
+
+      button.addEventListener("click", async () => {
+        try {
+          await CLIPBOARD.writeText(source.textContent ?? "");
+          flash("copied");
+        } catch {
+          // Permission denied, or the document lost focus mid-write.
+          flash("failed");
+        }
+      });
+
+      // The button is positioned against the block, so the block needs to be
+      // the containing block. Doing it here keeps the rule next to the reason.
+      pre.style.position = "relative";
+      pre.appendChild(button);
+    }
+  }
+</script>
+
+<style is:global>
+  .mdx-content pre .code-copy {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.15rem 0.5rem;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted-foreground);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    /* Hidden until the block is hovered or the button itself is focused, so
+       it never covers code you are trying to read — but keyboard users can
+       still reach it, because :focus-visible keeps it on screen. */
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .mdx-content pre:hover .code-copy,
+  .mdx-content pre .code-copy:focus-visible {
+    opacity: 1;
+  }
+  .mdx-content pre .code-copy:hover {
+    color: var(--foreground);
+    border-color: var(--primary);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mdx-content pre .code-copy {
+      transition: none;
+    }
+  }
+  /* Paper has no clipboard. */
+  @media print {
+    .mdx-content pre .code-copy {
+      display: none;
+    }
+  }
+</style>
