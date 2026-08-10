@@ -510,6 +510,95 @@ test("ships a non-empty stylesheet", () => {
   }
 });
 
+/**
+ * A page's inline HTML plus every bundled script it loads. The theme toggle is
+ * a bundled module (only the pre-paint bootstrap is `is:inline`), so anything
+ * asserting on behaviour has to look in both places.
+ */
+function pageScripts(file) {
+  const html = readFileSync(file, "utf8");
+  const bundles = [...html.matchAll(/<script[^>]+src="(\/[^"]+\.js)"/g)]
+    .map((m) => join(dist, m[1]))
+    .filter((p) => existsSync(p))
+    .map((p) => readFileSync(p, "utf8"));
+  return [html, ...bundles].join("\n");
+}
+
+test("theme persistence is wired end to end", () => {
+  // Three pieces have to agree or the theme silently stops persisting: the
+  // pre-paint script that reads storage, the click handler that writes it, and
+  // the class they both talk about.
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, "utf8");
+    const code = pageScripts(file);
+
+    // The read must be inline in <head>, or the page paints the wrong theme
+    // first and flashes.
+    assert.match(
+      html,
+      /localStorage\.getItem\("theme"\)/,
+      `${routeOf(file)} does not read the saved theme before paint`,
+    );
+    // The bundled scripts are minified, and the minifier rewrites string
+    // quotes to backticks — so match any quote style, not just double.
+    assert.match(
+      code,
+      /localStorage\.setItem\(\s*["'`]theme["'`]/,
+      `${routeOf(file)} never writes the theme back`,
+    );
+    assert.match(
+      code,
+      /classList\.(add|toggle)\(\s*["'`]dark["'`]\)/,
+      `${routeOf(file)} does not apply the dark class`,
+    );
+    // Storage throws outright in some privacy modes, and an unguarded read in
+    // <head> would blank the page.
+    assert.match(html, /try\s*\{[\s\S]*localStorage/, `${routeOf(file)} storage access is unguarded`);
+  }
+});
+
+test("filter controls match the data they filter", () => {
+  // A renamed status/verdict enum would leave a button that quietly matches
+  // nothing. Every filter except "all" must select at least one real card.
+  for (const [page, attr] of [
+    ["projects", "data-status"],
+    ["reviews", "data-type"],
+  ]) {
+    const html = readFileSync(join(dist, page, "index.html"), "utf8");
+
+    const filters = [...html.matchAll(/data-filter="([^"]+)"/g)].map((m) => m[1]);
+    const values = new Set([...html.matchAll(new RegExp(`${attr}="([^"]+)"`, "g"))].map((m) => m[1]));
+
+    assert.ok(filters.includes("all"), `/${page} has no "all" filter`);
+    assert.ok(values.size > 0, `/${page} has no filterable cards`);
+
+    for (const filter of filters) {
+      if (filter === "all") continue;
+      assert.ok(
+        values.has(filter),
+        `/${page}: filter "${filter}" matches no card (${attr} values: ${[...values].join(", ")})`,
+      );
+    }
+    // And nothing is unreachable: every card value has a button.
+    for (const value of values) {
+      assert.ok(filters.includes(value), `/${page}: ${attr}="${value}" has no filter button`);
+    }
+  }
+});
+
+test("filtering and paging never hide content from a non-JS reader", () => {
+  // Cards must not ship pre-hidden: the unfiltered list is the no-JS default.
+  for (const page of ["projects", "reviews"]) {
+    const html = readFileSync(join(dist, page, "index.html"), "utf8");
+    for (const [tag] of html.matchAll(/<a\s[^>]*data-(status|type)="[^"]*"[^>]*>/g)) {
+      // Match the standalone `hidden` class only — "overflow-hidden" is a
+      // legitimate utility and a \bhidden\b regex would flag it.
+      const classes = (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+      assert.ok(!classes.includes("hidden"), `/${page} ships a hidden card`);
+    }
+  }
+});
+
 test("theme bootstrap defaults to light", () => {
   for (const file of htmlFiles) {
     const html = readFileSync(file, "utf8");
