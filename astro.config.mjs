@@ -9,6 +9,36 @@ import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 
 import { rehypeHeadingAnchors } from "./src/lib/rehype-heading-anchors.mjs";
 
+// ── Administrator surface ────────────────────────────────────────────────
+// Built only when ADMIN_UI is set, and served only from the Cloudflare
+// Access-protected hostname. The page lives outside src/pages and is injected
+// here, rather than living in src/pages behind an empty getStaticPaths:
+// suppressing the route still compiles the page's <script>, which put 4.7 KB
+// of moderation code on the public origin as an orphan chunk.
+//
+// This switch keeps a useless page off the public site. It is not what
+// protects moderation — that is the Access application in front of the admin
+// hostname and the assertion-verifying middleware in the Go API.
+const adminUiEnabled = ["1", "true"].includes(
+  (process.env.ADMIN_UI ?? "").trim().toLowerCase(),
+);
+
+const adminUi = {
+  name: "packetcraft:admin-ui",
+  hooks: {
+    "astro:config:setup": ({ injectRoute, logger }) => {
+      if (!adminUiEnabled) return;
+      logger.warn(
+        "ADMIN_UI is set: building /admin/comments. Serve this output only from the Cloudflare Access-protected hostname.",
+      );
+      injectRoute({
+        pattern: "/admin/comments",
+        entrypoint: "./src/admin/comments.astro",
+      });
+    },
+  },
+};
+
 // ── Production origin ────────────────────────────────────────────────────
 // The one place the deployed origin is decided. Astro injects it as
 // `import.meta.env.SITE`, which src/lib/site.ts re-exports as SITE_ORIGIN, so
@@ -89,9 +119,12 @@ export default defineConfig({
   integrations: [
     mdx(),
     // Emits /sitemap-index.xml + /sitemap-0.xml from the routes actually
-    // built. Drafts never reach the build (see src/lib/content.ts), so there
-    // is nothing to exclude here today; `filter` is where admin routes would
-    // be dropped when Milestone 3 adds them.
-    sitemap(),
+    // built. Drafts never reach the build (see src/lib/content.ts), so the
+    // only thing to exclude is the administrator surface — which is normally
+    // absent anyway, since it is built only when ADMIN_UI is set.
+    sitemap({
+      filter: (page) => !new URL(page).pathname.startsWith("/admin"),
+    }),
+    adminUi,
   ],
 });

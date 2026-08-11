@@ -1,0 +1,61 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+// This file lives outside src/pages on purpose. astro.config.mjs injects it as
+// /admin/comments only when ADMIN_UI is set, so in a public build Astro never
+// sees it as a route and Rollup never compiles it — no page, and no orphan
+// script chunk either.
+//
+// A `getStaticPaths` returning [] is NOT enough: that suppresses the route but
+// still compiles the page's <script>, which shipped 4.7 KB of moderation code
+// to the public origin as an unreferenced but fetchable chunk.
+//
+// None of this is the security boundary. Moderation is protected by the
+// Cloudflare Access application in front of the admin hostname and by the Go
+// middleware behind it; both reject anything that arrives without a valid
+// assertion, whatever the frontend does or does not ship.
+---
+
+<Layout
+  title="moderation"
+  description="Comment moderation."
+  noindex
+>
+  <main class="max-w-5xl mx-auto px-6 py-12">
+    <h1 class="font-bold font-mono text-[32px] text-foreground mb-2">moderation</h1>
+    <p class="text-[14px] font-mono text-muted-foreground mb-6">
+      Comments across every post, newest first. Hidden comments never appear publicly.
+    </p>
+
+    <div data-admin-root>
+      <div class="flex gap-2 mb-4 flex-wrap" data-admin-filters role="group" aria-label="Filter comments by status"></div>
+
+      <p
+        data-admin-status
+        class="text-[14px] font-mono text-muted-foreground min-h-[1.5rem]"
+        role="status"
+        aria-live="polite"
+      ></p>
+
+      <ol data-admin-list class="flex flex-col gap-3 mt-2"></ol>
+
+      <div data-admin-actions class="mt-4"></div>
+
+      <noscript>
+        <p class="text-[14px] font-mono text-muted-foreground">
+          Moderation needs JavaScript: the comment list is read from the API after
+          the page loads.
+        </p>
+      </noscript>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  // No lazy trigger here, unlike the public fragments: this page exists only
+  // to show the list, so waiting for it to scroll into view would be silly.
+  import { mountAdminComments } from "../features/admin-comments/mount";
+
+  const root = document.querySelector<HTMLElement>("[data-admin-root]");
+  if (root) mountAdminComments(root);
+</script>

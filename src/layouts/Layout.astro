@@ -26,6 +26,10 @@ interface Props {
   ogType?: "website" | "article";
   /** ISO date, only meaningful when ogType is "article". */
   publishedDate?: string;
+  /** Keep the page out of search results. Set on the administrator surface,
+      which is behind Cloudflare Access and has nothing public to index. This
+      is a courtesy to crawlers, never a substitute for the Access policy. */
+  noindex?: boolean;
 }
 
 const {
@@ -36,6 +40,7 @@ const {
   imageAlt,
   ogType = "website",
   publishedDate,
+  noindex = false,
 } = Astro.props;
 
 const pageTitle = title ? `${title} · ${SITE.name}` : SITE.name;
@@ -70,6 +75,7 @@ const twitterCard =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/png" href="/favicon.png?v=2" />
     <link
