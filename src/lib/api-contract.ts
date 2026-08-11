@@ -78,6 +78,66 @@ export interface PostStats {
   likes: number;
 }
 
+// ── Administrator surface ────────────────────────────────────────────────
+// These belong to /api/admin, which the backend registers only behind its
+// Cloudflare Access middleware. Nothing here authenticates anything: the
+// browser never holds a token, and these types describe responses that only
+// arrive when Access has already vouched for the request at the edge. See
+// src/lib/admin.ts for the boundary and DEVELOPMENT.md for the model.
+
+/** components.schemas.CommentStatus */
+export type CommentStatus = "visible" | "hidden";
+
+/** components.schemas.ModerationComment — includes hidden comments, which
+    never appear in the public CommentPage. */
+export interface ModerationComment {
+  id: number;
+  post_slug: string;
+  author_name: string;
+  body: string;
+  status: CommentStatus;
+  created_at: string;
+  /** null while the comment is visible. */
+  hidden_at: string | null;
+}
+
+/** components.schemas.ModerationCommentPage */
+export interface ModerationCommentPage {
+  comments: ModerationComment[];
+  next_before_id: number | null;
+}
+
+export function isCommentStatus(value: unknown): value is CommentStatus {
+  return value === "visible" || value === "hidden";
+}
+
+export function isModerationComment(value: unknown): value is ModerationComment {
+  if (!isRecord(value)) return false;
+  return (
+    Number.isSafeInteger(value.id) &&
+    (value.id as number) >= 1 &&
+    typeof value.post_slug === "string" &&
+    typeof value.author_name === "string" &&
+    typeof value.body === "string" &&
+    isCommentStatus(value.status) &&
+    isNonEmptyString(value.created_at) &&
+    !Number.isNaN(Date.parse(value.created_at as string)) &&
+    // hidden_at is a timestamp only when the comment is hidden.
+    (value.hidden_at === null ||
+      (isNonEmptyString(value.hidden_at) && !Number.isNaN(Date.parse(value.hidden_at as string))))
+  );
+}
+
+export function isModerationCommentPage(value: unknown): value is ModerationCommentPage {
+  if (!isRecord(value)) return false;
+  if (!Array.isArray(value.comments)) return false;
+  if (value.comments.length > LIMITS.pageSizeMax) return false;
+  if (!value.comments.every(isModerationComment)) return false;
+
+  const cursor = value.next_before_id;
+  return cursor === null || (Number.isSafeInteger(cursor) && (cursor as number) >= 1);
+}
+
 /** components.schemas.CreateComment */
 export interface CreateComment {
   author_name: string;
