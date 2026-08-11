@@ -103,6 +103,18 @@ export interface RequestOptions<T> {
   validate?: (value: unknown) => value is T;
   /** Accept an empty body as success and resolve to undefined. */
   expectNoContent?: boolean;
+  /**
+   * Whether to send cookies. Defaults to "omit", which is right for every
+   * public endpoint: they are all unauthenticated, and sending credentials to
+   * them would be a way to leak one.
+   *
+   * The admin surface sets "same-origin" so the browser attaches the
+   * `CF_Authorization` cookie Cloudflare Access issued for the admin
+   * hostname. It is deliberately *not* "include": the admin page and the
+   * admin API must be the same origin (see src/lib/admin.ts), so
+   * "same-origin" sends the cookie where it is meant to go and nowhere else.
+   */
+  credentials?: RequestCredentials;
 }
 
 export function buildUrl(
@@ -179,9 +191,10 @@ export async function requestFrom<T>(
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
-      // No cookies or auth headers: every endpoint here is public, and sending
-      // credentials to a public API is a way to leak them.
-      credentials: "omit",
+      // Public endpoints send nothing; only the admin surface opts in. The
+      // frontend never constructs, stores or forwards an Access assertion —
+      // Cloudflare injects it at the edge and the Go middleware validates it.
+      credentials: options.credentials ?? "omit",
       // The reader wants the current comments, not a cached page of them.
       cache: "no-store",
     });
