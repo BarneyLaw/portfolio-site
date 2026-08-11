@@ -42,6 +42,7 @@ output, so neither may ever hold a secret.
 |---|---|---|
 | `PUBLIC_SITE_ORIGIN` | `https://packetcraft.dev` | Origin used for canonical tags, the RSS feed and the sitemap. Validated during build: must be a bare `https` origin (or `localhost`) with no path. |
 | `PUBLIC_API_BASE_URL` | `/api` in the container, unset locally | Base for the Go backend. Empty disables every dynamic fragment at build time. See [Backend integration](#backend-integration-go--postgres). |
+| `ADMIN_UI` | unset | Set to `1` to build the Cloudflare Access-protected moderation page. Off by default; a public build contains no admin route or code. See [Administrator surface](#administrator-surface-cloudflare-access). |
 
 ### Generated assets
 
@@ -101,6 +102,7 @@ the TypeScript source directly (Node strips the types, so no build step).
 | `test/api-transport.test.mjs` | `apiRequest` against a real local server: timeout, cancellation, error mapping, and that a 2xx failing its validator is rejected |
 | `test/comments.test.mjs` | The XSS rule across every feature module, that only `api.ts` calls `fetch`, and the shipped comment and stats shells |
 | `test/content-contract.test.mjs` | FEAT-202: pages never import an API module or call `getCollection`, no migration or content table exists, and every detail route carries its body in the HTML |
+| `test/admin-surface.test.mjs` | No build ships a login form or token storage, public builds contain no admin code at all, and admin stays out of sitemap/feed/robots |
 
 There is no browser and no browser dependency. `test/served-site.test.mjs`
 re-implements the `try_files` rule from `nginx.conf` over `node:http`; the
@@ -604,6 +606,76 @@ reserves its height so arriving numbers never push the comments down.
 stats features store, and it never leaves the browser. No cookie is set and no
 identifier is sent. Whatever the server uses to deduplicate views and attribute
 likes is the backend's to define and document.
+
+## Administrator surface (Cloudflare Access)
+
+### There is no login, anywhere
+
+Not on the frontend, and not on the backend either — the Go API has no login
+endpoint, no password, no session, no refresh token, and issues no admin JWT.
+Authentication happens entirely at Cloudflare's edge:
+
+1. The whole `admin.site.packetcraft.dev` hostname is a deny-by-default
+   Cloudflare Access application.
+2. An unauthenticated browser never reaches the origin; Cloudflare serves its
+   own identity flow first.
+3. Once authenticated, Cloudflare sets a `CF_Authorization` cookie for that
+   hostname and injects a signed `Cf-Access-Jwt-Assertion` header into every
+   request it forwards.
+4. The Go middleware verifies that assertion — RS256 against Cloudflare's
+   JWKS, exact issuer, audience, expiry, and the configured administrator
+   email — before any moderation handler runs.
+
+**The frontend's entire job is to make a same-origin request and let the
+browser attach the cookie it already has.** It never sees, stores, parses or
+forwards a token. There is nothing here to steal, and a test asserts no build
+ships a password field, a token store, or code that sets the assertion header
+itself.
+
+A `401` therefore means *the Access session expired*, not *you are unknown*.
+The UI says so and tells you to reload, which re-enters Cloudflare's flow.
+Rendering a login form would be inventing a second, weaker authority.
+
+### Same-origin is a hard requirement
+
+**The backend sets no CORS headers of any kind.** A moderation page served
+from `packetcraft.dev` calling `admin.site.packetcraft.dev` would have every
+response blocked by the browser, and the Access cookie would not be sent
+cross-site anyway.
+
+So the admin page must be served *from the admin hostname*, behind the same
+Access application as the API. That is why the client uses
+`credentials: "same-origin"` rather than `"include"`.
+
+### Building it
+
+```bash
+ADMIN_UI=1 PUBLIC_API_BASE_URL=/api npm run build
+```
+
+Off by default. A public build contains **no** `/admin` route and no
+administrator code at all — verified by test, including the orphan-chunk case
+below.
+
+> **Why the page lives in `src/admin/`, not `src/pages/admin/`.**
+> A `getStaticPaths` returning `[]` suppresses the *route* but still compiles
+> the page's `<script>`, which shipped 4.7 KB of moderation code to the public
+> origin as an unreferenced but publicly fetchable chunk. The page is injected
+> as a route by `astro.config.mjs` only when `ADMIN_UI` is set, so in a public
+> build Rollup never sees it. `test/admin-surface.test.mjs` fails if this
+> regresses.
+
+`ADMIN_UI` is a build convenience, **not** a security control. It keeps a
+useless page off the public site; what protects moderation is Access and the
+Go middleware. Hiding a control is never authorization.
+
+### Deployment prerequisite (not yet in place)
+
+The admin hostname currently routes only `/api/admin` to the backend. Serving
+the moderation UI needs the GitOps repository to also route
+`admin.site.packetcraft.dev` **non-`/api` paths to an `ADMIN_UI=1` build of
+this site**, with Cloudflare Access covering the entire hostname. Until then
+the page has nowhere to live, and none of this is exercisable end to end.
 
 ### Not built, and why
 
