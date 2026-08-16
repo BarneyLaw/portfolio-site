@@ -21,7 +21,7 @@ export const SITE = {
   /** Wordmark / feed title. */
   name: "packetcraft",
   /** Shown as the bare domain in the footer lockup. */
-  domain: "packetcraft.dev",
+  domain: "site.packetcraft.dev",
   author: "Leifsen",
   /** Default <meta name="description">, and the feed description. */
   description:
