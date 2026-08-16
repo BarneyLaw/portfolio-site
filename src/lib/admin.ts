@@ -6,7 +6,7 @@
 // login endpoint, no password, no session, no refresh token and issues no
 // admin JWT of its own. Authentication happens entirely at the edge:
 //
-//   1. The whole `admin.site.packetcraft.dev` hostname is a deny-by-default
+//   1. The whole `site-admin.packetcraft.dev` hostname is a deny-by-default
 //      Cloudflare Access application.
 //   2. A browser that has not authenticated never reaches the origin at all;
 //      Cloudflare serves its own identity flow first.
@@ -24,7 +24,7 @@
 // ## Why same-origin is not optional
 //
 // The backend sets no CORS headers of any kind. A moderation page served from
-// `packetcraft.dev` calling `admin.site.packetcraft.dev` would have every
+// `packetcraft.dev` calling `site-admin.packetcraft.dev` would have every
 // response blocked by the browser before it could be read, and the Access
 // cookie would not be sent cross-site anyway. The admin page must therefore be
 // served *from the admin hostname itself*, behind the same Access application
