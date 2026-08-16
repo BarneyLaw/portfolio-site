@@ -42,6 +42,7 @@ output, so neither may ever hold a secret.
 |---|---|---|
 | `PUBLIC_SITE_ORIGIN` | `https://packetcraft.dev` | Origin used for canonical tags, the RSS feed and the sitemap. Validated during build: must be a bare `https` origin (or `localhost`) with no path. **⚠ The live site currently answers on `https://site.packetcraft.dev`; the apex does not resolve.** Unless the deployment overrides this, canonical URLs, the sitemap and every Open Graph image point at a host that cannot be reached. |
 | `PUBLIC_API_BASE_URL` | `/api` in the container, unset locally | Base for the Go backend. Empty disables every dynamic fragment at build time. See [Backend integration](#backend-integration-go--postgres). |
+| `DEV_API_TARGET` | `https://site.packetcraft.dev` | Where `astro dev` proxies `/api`. Dev only — never affects a build. Point it at a local Go process to keep dev writes off production. |
 | `ADMIN_UI` | unset | Set to `1` to build the Cloudflare Access-protected moderation page. Off by default; a public build contains no admin route or code. See [Administrator surface](#administrator-surface-cloudflare-access). |
 
 ### Generated assets
@@ -484,6 +485,39 @@ The site is static and stays completely useful with the backend down. The API
 powers *optional fragments* only — never page content. `openapi.yaml` in the
 backend repository is the contract; `src/lib/api-contract.ts` is its
 transcription.
+
+### Testing against the API in dev
+
+Set `PUBLIC_API_BASE_URL=/api` and let `astro dev` proxy it. **Do not point it
+straight at `https://site.packetcraft.dev/api`** — that is the one setup that
+cannot work.
+
+In production the site and API share an origin, so CORS never arises and the Go
+backend deliberately sends no CORS headers. `astro dev` breaks that assumption:
+the page is on `localhost:4321`, so every call becomes cross-origin, and
+
+- a `GET` returns `200` with data that the browser then **refuses to let
+  JavaScript read** — it surfaces only as `TypeError: Failed to fetch`;
+- a comment `POST` never leaves the browser at all: its preflight `OPTIONS`
+  gets a `405`.
+
+`curl` shows none of this, because curl does not enforce CORS. That mismatch is
+what makes it confusing to debug.
+
+The proxy in `astro.config.mjs` restores the production shape: the page calls
+`localhost:4321/api/…` (same origin), and Vite forwards it server-side where
+CORS does not apply. `changeOrigin` is required — Traefik routes the backend by
+`Host`, so a forwarded request still claiming `localhost:4321` would not match.
+
+> **Dev writes are real writes.** The proxy defaults to the deployed backend, so
+> a comment or a like posted from `localhost` lands in production, and simply
+> reading a post records a real view after the 5s dwell. `astro dev logs` warns
+> about this at startup. Set `DEV_API_TARGET=http://localhost:8080` to point at
+> a local Go process instead.
+
+The proxy is **dev only**. It does not exist in a build, and it does **not**
+apply to `astro preview`, which serves `dist/` from a different server — for
+that, point `PUBLIC_API_BASE_URL` at a real origin or run a standalone proxy.
 
 ### The content boundary is not negotiable
 
