@@ -9,6 +9,34 @@ import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 
 import { rehypeHeadingAnchors } from "./src/lib/rehype-heading-anchors.mjs";
 
+// ── Dev API proxy target ─────────────────────────────────────────────────
+// Where `astro dev` forwards /api. Defaults to the deployed backend so a fresh
+// clone can exercise comments immediately; point DEV_API_TARGET at a local Go
+// process (e.g. http://localhost:8080) when you have one running.
+//
+// A trailing /api is tolerated and stripped: the proxy preserves the request
+// path, so the target must be a bare origin or every call would land on
+// /api/api/…, which is a genuinely confusing 404 to debug.
+const DEV_API_TARGET = (process.env.DEV_API_TARGET?.trim() || "https://site.packetcraft.dev")
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "");
+
+/** Warns once, at dev startup, that dev traffic is hitting a real backend. */
+const devProxyNotice = {
+  name: "packetcraft:dev-api-proxy",
+  hooks: {
+    "astro:config:setup": ({ command, logger }) => {
+      if (command !== "dev") return;
+      logger.warn(`/api is proxied to ${DEV_API_TARGET}`);
+      if (!DEV_API_TARGET.includes("localhost") && !DEV_API_TARGET.includes("127.0.0.1")) {
+        logger.warn(
+          "That is a real backend: comments and likes posted in dev are real writes. Set DEV_API_TARGET to point elsewhere.",
+        );
+      }
+    },
+  },
+};
+
 // ── Administrator surface ────────────────────────────────────────────────
 // Built only when ADMIN_UI is set, and served only from the Cloudflare
 // Access-protected hostname. The page lives outside src/pages and is injected
@@ -114,6 +142,37 @@ export default defineConfig({
         "@": fileURLToPath(new URL("./src", import.meta.url)),
       },
     },
+
+    // ── Dev-only API proxy ───────────────────────────────────────────────
+    // In production the site and the API share an origin, so the browser
+    // never involves CORS. `astro dev` breaks that: the page is on
+    // localhost:4321 and the API is on another host, which makes every call a
+    // cross-origin request — and the Go backend sends no CORS headers at all
+    // (by design; it never needs them in production). The browser fetches the
+    // response and then refuses to let JavaScript read it, surfacing as a bare
+    // "TypeError: Failed to fetch". A comment POST fails even earlier: its
+    // preflight OPTIONS gets a 405.
+    //
+    // Proxying restores the production shape. The page calls
+    // http://localhost:4321/api/… (same origin, no CORS), and Vite forwards it
+    // server-side, where CORS does not apply.
+    //
+    // `changeOrigin` is required, not cosmetic: Traefik routes the backend by
+    // Host, so a forwarded request still carrying `Host: localhost:4321` would
+    // not match its rule.
+    //
+    // This block only exists in `astro dev`. It is absent from `astro build`
+    // output and does NOT apply to `astro preview`, which serves dist/ from a
+    // different server — point PUBLIC_API_BASE_URL at a real origin, or use a
+    // standalone proxy, when testing a production build.
+    server: {
+      proxy: {
+        "/api": {
+          target: DEV_API_TARGET,
+          changeOrigin: true,
+        },
+      },
+    },
   },
 
   integrations: [
@@ -126,5 +185,6 @@ export default defineConfig({
       filter: (page) => !new URL(page).pathname.startsWith("/admin"),
     }),
     adminUi,
+    devProxyNotice,
   ],
 });
