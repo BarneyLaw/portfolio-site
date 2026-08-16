@@ -17,6 +17,11 @@ const isoDate = z
     See the publication rules in src/lib/content.ts. */
 const draft = z.boolean().default(false);
 
+/** Set false to close comments on one entry. Every reading type supports them.
+    The section also needs the backend configured at build time *and* the slug
+    registered in the API's content registry — see src/lib/comments.ts. */
+const comments = z.boolean().default(true);
+
 /**
  * Media fields, shared by all three collections. The two image slots had
  * overlapping names and a single shared alt string; these are their roles:
@@ -52,10 +57,7 @@ const blog = defineCollection({
       excerpt: z.string(),
       featured: z.boolean().default(false),
       draft,
-      /** Set false to close comments on one post. The section then renders
-          nothing at all — no form, no heading. Comments also require the
-          backend to be configured at build time; see src/lib/api.ts. */
-      comments: z.boolean().default(true),
+      comments,
       ...media(ctx),
     }),
 });
@@ -86,6 +88,7 @@ const projects = defineCollection({
           }),
         )
         .default([]),
+      comments,
       ...media(ctx),
     }),
 });
@@ -100,6 +103,7 @@ const reviews = defineCollection({
       date: isoDate,
       excerpt: z.string(),
       draft,
+      comments,
       ...media(ctx),
     }),
 });
