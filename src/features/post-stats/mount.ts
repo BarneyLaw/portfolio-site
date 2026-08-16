@@ -100,7 +100,13 @@ export function mountPostStats(root: HTMLElement): () => void {
     }
   });
 
+  const spinner = root.querySelector<HTMLElement>("[data-post-stats-spinner]");
+  const setLoading = (busy: boolean) => {
+    if (spinner) spinner.hidden = !busy;
+  };
+
   (async () => {
+    setLoading(true);
     try {
       const stats = await getPostStats(slug, controller.signal);
       likes = stats.likes;
@@ -117,6 +123,10 @@ export function mountPostStats(root: HTMLElement): () => void {
         error instanceof ApiError && error.status === 404
           ? ""
           : "Stats are unavailable right now.";
+    } finally {
+      // Cleared on both paths: a spinner left turning after a failure claims
+      // work is still happening when it is not.
+      setLoading(false);
     }
   })();
 

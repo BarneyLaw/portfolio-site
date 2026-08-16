@@ -121,6 +121,14 @@ export function mountComments(section: HTMLElement): () => void {
     statusEl.textContent = text;
   };
 
+  // The walking sprite stands in for "loading". It lives in the static shell
+  // (its frames come from the asset pipeline) and is simply revealed here.
+  const loadingEl = section.querySelector<HTMLElement>("[data-comments-loading]");
+  // Named `busy` so it does not shadow the `loading` re-entrancy flag below.
+  const setLoading = (busy: boolean) => {
+    if (loadingEl) loadingEl.hidden = !busy;
+  };
+
   // ── Loading older pages ────────────────────────────────────────────────
 
   const loadMoreButton = el("button", { type: "button", class: GHOST_BUTTON }, "Load older comments");
@@ -133,7 +141,10 @@ export function mountComments(section: HTMLElement): () => void {
     loading = true;
     loadMoreButton.disabled = true;
     retryButton.remove();
-    setStatus(listEl!.childElementCount === 0 ? "Loading comments…" : "Loading older comments…");
+    // The sprite carries the loading state; the status line stays clear so an
+    // error can replace it without the two fighting over the same space.
+    setLoading(true);
+    setStatus("");
 
     try {
       const page = await listComments(slug, {
@@ -164,6 +175,7 @@ export function mountComments(section: HTMLElement): () => void {
       }
     } finally {
       loading = false;
+      setLoading(false);
       loadMoreButton.disabled = false;
     }
   };
