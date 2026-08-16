@@ -37,8 +37,18 @@ const frames = Object.entries(
     const frames = JSON.parse(el.dataset.frames || "[]") as string[];
     const fps = Number(el.dataset.fps) || 10;
     if (frames.length < 2) continue;
+
+    // Someone who asked for less motion gets the first frame and no timer.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) continue;
+
     let i = 0;
     setInterval(() => {
+      // The sprite is used as a loading indicator, so it spends most of its
+      // life hidden. `offsetParent === null` covers `hidden` and
+      // `display: none` ancestors: skip the work rather than swap frames on
+      // something nobody can see. Without this, every reading page would run
+      // a 10fps timer forever just to animate an invisible image.
+      if (el.offsetParent === null) return;
       i = (i + 1) % frames.length;
       el.src = frames[i];
     }, 1000 / fps);
