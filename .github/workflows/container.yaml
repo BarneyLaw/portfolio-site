@@ -44,6 +44,7 @@ jobs:
           push: true
           build-args: |
             PUBLIC_API_BASE_URL=/api
+            CONTENT_REVISION=${{ github.sha }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

@@ -18,6 +18,13 @@ ENV PUBLIC_API_BASE_URL=${PUBLIC_API_BASE_URL}
 ARG PUBLIC_SITE_ORIGIN=""
 ENV PUBLIC_SITE_ORIGIN=${PUBLIC_SITE_ORIGIN}
 
+# Commit id stamped into dist/content-registry.json. Required: .dockerignore
+# excludes .git, so the build cannot fall back to `git rev-parse` the way a
+# local build does, and a registry that cannot be traced to a commit is not
+# worth publishing. The build fails with an explicit message if this is unset.
+ARG CONTENT_REVISION=""
+ENV CONTENT_REVISION=${CONTENT_REVISION}
+
 RUN npm run check
 RUN npm run build
 
