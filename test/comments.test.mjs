@@ -19,23 +19,33 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const dist = join(root, "dist");
-const contentDir = join(root, "src", "content", "blog");
+const contentDir = join(root, "src", "content");
 
 if (!existsSync(dist)) {
   throw new Error(`No dist/ at ${dist} — run \`npm run build\` before \`npm test\`.`);
 }
 
-/** Blog post pages, as { slug, html }. */
-const posts = readdirSync(contentDir)
-  .filter((f) => f.endsWith(".mdx"))
-  .map((f) => f.replace(/\.mdx$/, ""))
-  .map((slug) => ({
-    slug,
-    file: join(dist, "blog", slug, "index.html"),
-    frontmatter: readFileSync(join(contentDir, `${slug}.mdx`), "utf8").split(/^---$/m)[1],
-  }))
-  .filter((p) => existsSync(p.file))
-  .map((p) => ({ ...p, html: readFileSync(p.file, "utf8") }));
+/** Every reading — blog posts, projects and reviews all carry comments. */
+const collections = [
+  { name: "blog", route: "blog" },
+  { name: "projects", route: "projects" },
+  { name: "reviews", route: "reviews" },
+];
+
+const posts = collections.flatMap(({ name, route }) =>
+  readdirSync(join(contentDir, name))
+    .filter((f) => f.endsWith(".mdx"))
+    .map((f) => f.replace(/\.mdx$/, ""))
+    .map((slug) => ({
+      slug,
+      collection: name,
+      route: `/${route}/${slug}`,
+      file: join(dist, route, slug, "index.html"),
+      frontmatter: readFileSync(join(contentDir, name, `${slug}.mdx`), "utf8").split(/^---$/m)[1],
+    }))
+    .filter((p) => existsSync(p.file))
+    .map((p) => ({ ...p, html: readFileSync(p.file, "utf8") })),
+);
 
 /** Was the build given an API base? Inferred from the output itself, so the
     suite is correct for a configured and an unconfigured build alike. */
@@ -108,13 +118,13 @@ test("the API client is the only thing that calls fetch", () => {
 
 test("posts render the article regardless of the comment fragment", () => {
   for (const post of posts) {
-    assert.match(post.html, /<article class="mdx-content">/, `/blog/${post.slug} lost its article`);
+    assert.match(post.html, /<article class="mdx-content">/, `${post.route} lost its article`);
     // The article must not be nested inside the comment section, or a failure
     // there could take the post with it.
     const article = post.html.indexOf('<article class="mdx-content">');
     const section = post.html.indexOf("data-comments");
     if (section !== -1) {
-      assert.ok(article < section, `/blog/${post.slug} renders the article after the comments`);
+      assert.ok(article < section, `${post.route} renders the article after the comments`);
     }
   }
 });
@@ -130,24 +140,24 @@ test("the comment section ships only a shell, never a form or a comment", () => 
     assert.match(
       post.html,
       new RegExp(`data-comments[^>]*data-slug="${post.slug}"`),
-      `/blog/${post.slug} comment section has the wrong slug`,
+      `${post.route} comment section has the wrong slug`,
     );
     // Static HTML carries the heading and the reserved regions only. The list
     // and the form are built by the client module, so a reader without
     // JavaScript is never shown a control that cannot work.
     const section = post.html.slice(post.html.indexOf("data-comments"));
-    assert.doesNotMatch(section, /<form/, `/blog/${post.slug} ships a comment form in HTML`);
-    assert.doesNotMatch(section, /<li[\s>]/, `/blog/${post.slug} ships pre-rendered comments`);
-    assert.match(section, /<noscript>/, `/blog/${post.slug} has no no-JS explanation`);
-    assert.match(section, /data-comments-status/, `/blog/${post.slug} has no status region`);
-    assert.match(section, /data-comments-list/, `/blog/${post.slug} has no list region`);
+    assert.doesNotMatch(section, /<form/, `${post.route} ships a comment form in HTML`);
+    assert.doesNotMatch(section, /<li[\s>]/, `${post.route} ships pre-rendered comments`);
+    assert.match(section, /<noscript>/, `${post.route} has no no-JS explanation`);
+    assert.match(section, /data-comments-status/, `${post.route} has no status region`);
+    assert.match(section, /data-comments-list/, `${post.route} has no list region`);
   }
   assert.ok(checked > 0, "no posts with comments enabled — the check would be vacuous");
 });
 
 test("a post that closes comments renders no comment markup", () => {
   for (const post of posts.filter((p) => !commentsEnabled(p))) {
-    assert.doesNotMatch(post.html, /data-comments/, `/blog/${post.slug} closes comments but shows them`);
+    assert.doesNotMatch(post.html, /data-comments/, `${post.route} closes comments but shows them`);
   }
 });
 
@@ -157,40 +167,41 @@ test("the comment section is a labelled region with a heading", () => {
     assert.match(
       post.html,
       /<section[^>]*aria-labelledby="comments-heading"/,
-      `/blog/${post.slug} comment section is not labelled`,
+      `${post.route} comment section is not labelled`,
     );
     assert.match(
       post.html,
       /<h2 id="comments-heading"/,
-      `/blog/${post.slug} comment heading is missing or not an h2`,
+      `${post.route} comment heading is missing or not an h2`,
     );
   }
 });
 
 test("the stats row reserves its height and ships no control", () => {
   if (!apiConfigured) return;
-  for (const post of posts) {
+  // Views, likes and stats are blog-only. Comments are on every reading.
+  for (const post of posts.filter((p) => p.collection === "blog")) {
     const row = post.html.match(/<div[^>]*data-post-stats[^>]*>/)?.[0];
-    assert.ok(row, `/blog/${post.slug} has no stats row`);
+    assert.ok(row, `${post.route} has no stats row`);
     assert.match(row, new RegExp(`data-slug="${post.slug}"`), `stats row slug mismatch`);
     // Reserving height is what stops the numbers arriving and shoving the
     // comments below them down the page.
-    assert.match(row, /min-h-\[/, `/blog/${post.slug} stats row reserves no height`);
+    assert.match(row, /min-h-\[/, `${post.route} stats row reserves no height`);
 
     // A like button in static HTML would do nothing without JavaScript.
     const section = post.html.slice(post.html.indexOf("data-post-stats"));
     const beforeComments = section.slice(0, section.indexOf("data-comments"));
-    assert.doesNotMatch(beforeComments, /<button/, `/blog/${post.slug} ships a like button in HTML`);
+    assert.doesNotMatch(beforeComments, /<button/, `${post.route} ships a like button in HTML`);
     assert.match(beforeComments, /data-post-stats-status/, `no status region in the stats row`);
   }
 });
 
 test("the view beacon is inert markup and renders nothing visible", () => {
   if (!apiConfigured) return;
-  for (const post of posts) {
+  for (const post of posts.filter((p) => p.collection === "blog")) {
     const beacon = post.html.match(/<span[^>]*data-view-beacon[^>]*>/)?.[0];
-    assert.ok(beacon, `/blog/${post.slug} has no view beacon`);
-    assert.match(beacon, /\shidden(\s|>)/, `/blog/${post.slug} view beacon is not hidden`);
+    assert.ok(beacon, `${post.route} has no view beacon`);
+    assert.match(beacon, /\shidden(\s|>)/, `${post.route} view beacon is not hidden`);
     assert.match(beacon, new RegExp(`data-slug="${post.slug}"`), `beacon slug mismatch`);
   }
 });
@@ -200,8 +211,8 @@ test("comment code is lazily loaded, not part of the page's initial scripts", ()
   const post = posts.find(commentsEnabled);
   const eager = [...post.html.matchAll(/<script[^>]+src="(\/_astro\/[^"]+)"/g)].map((m) => m[1]);
 
-  // The mount module holds the comment UI. Loading it eagerly on every post
-  // would defeat the point of deferring it until the section is in view.
+  // The mount module holds the comment UI. Loading it eagerly on every page
+  // would defeat the point of waiting for the reader to ask for it.
   for (const src of eager) {
     assert.ok(!/\/mount\./.test(src), `${src} is loaded eagerly; it should be a dynamic import`);
   }
@@ -211,4 +222,57 @@ test("comment code is lazily loaded, not part of the page's initial scripts", ()
     chunks.some((f) => /^mount\..*\.js$/.test(f)),
     "no separate mount chunk was emitted",
   );
+});
+
+test("comments open on an explicit request, not on scroll", () => {
+  if (!apiConfigured) return;
+
+  // The bootstrap must not observe the viewport: the reader asks for comments
+  // by pressing a control, and nothing is fetched before that.
+  const bootstrap = readdirSync(join(dist, "_astro"))
+    .filter((f) => /^Comments\.astro.*\.js$/.test(f))
+    .map((f) => readFileSync(join(dist, "_astro", f), "utf8"))
+    .join("\n");
+
+  assert.ok(bootstrap.length > 0, "no Comments bootstrap chunk was emitted");
+  assert.ok(
+    !bootstrap.includes("IntersectionObserver"),
+    "comments still load from a viewport trigger; they must wait for a click",
+  );
+  assert.match(bootstrap, /addEventListener\(\s*[`"']click[`"']/, "no click handler wires the opener");
+
+  // And the opener itself is script-injected, so no-JS readers get no control.
+  for (const post of posts.filter(commentsEnabled)) {
+    const section = post.html.slice(post.html.indexOf("data-comments"));
+    assert.match(section, /data-comments-open/, `${post.route} has no opener slot`);
+    assert.doesNotMatch(section, /<button/, `${post.route} ships the opener button in HTML`);
+  }
+});
+
+test("every reading carries a comment section", () => {
+  if (!apiConfigured) return;
+  for (const collection of ["blog", "projects", "reviews"]) {
+    const inCollection = posts.filter((p) => p.collection === collection && commentsEnabled(p));
+    assert.ok(inCollection.length > 0, `no ${collection} pages found`);
+    for (const post of inCollection) {
+      assert.match(post.html, /data-comments/, `${post.route} has no comment section`);
+    }
+  }
+});
+
+test("slugs are unique across every collection", () => {
+  // The backend's content registry keys on slug alone — `content_items.slug`
+  // is its primary key, shared by posts, projects and reviews. Two entries
+  // with the same slug in different collections would be one row there, and
+  // their comments would merge.
+  const seen = new Map();
+  for (const post of posts) {
+    const clash = seen.get(post.slug);
+    assert.ok(
+      !clash,
+      `slug "${post.slug}" is used by both ${clash} and ${post.collection}; ` +
+        `the API keys comments on slug alone, so their threads would merge`,
+    );
+    seen.set(post.slug, post.collection);
+  }
 });
