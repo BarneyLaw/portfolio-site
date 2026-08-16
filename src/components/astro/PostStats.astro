@@ -24,6 +24,23 @@ const show = apiConfigured();
       data-post-stats
       data-slug={slug}
     >
+      {/* Conventional spinner, unlike the comment section's sprite: this row
+          is small and inline, and a walking character next to two numbers
+          would read as decoration rather than progress. Hidden until the
+          client module starts its request. */}
+      <span
+        data-post-stats-spinner
+        hidden
+        class="inline-flex items-center gap-2 text-[13px] font-mono text-muted-foreground"
+        role="status"
+      >
+        <span
+          class="inline-block w-3.5 h-3.5 rounded-full border-2 border-border border-t-primary animate-spin"
+          aria-hidden="true"
+        ></span>
+        loading stats…
+      </span>
+
       <p
         data-post-stats-status
         class="text-[13px] font-mono text-muted-foreground"
