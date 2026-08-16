@@ -9,7 +9,8 @@ on:
       - master
   workflow_dispatch:
 
-# A newer push to the same PR makes the in-flight run irrelevant.
+# Only the newest run for a branch remains relevant. For master, this also
+# prevents two frontend releases from promoting concurrently.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -29,7 +30,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24 # matches node:24-alpine in the Dockerfile
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -42,11 +43,10 @@ jobs:
         run: npm run build
         env:
           PUBLIC_API_BASE_URL: /api
-          # Stamped into dist/content-registry.json so a deployed registry can
-          # be traced back to the content that produced it.
+          # Stamped into dist/content-registry.json.
           GITHUB_SHA: ${{ github.sha }}
 
-      - name: Smoke-test the built site
+      - name: Test built site and content registry
         run: npm test
 
       - name: Upload build output
@@ -55,16 +55,11 @@ jobs:
           name: dist
           path: dist
           retention-days: 7
+          if-no-files-found: error
 
-      # Published separately from dist/ because this is the file GitOps
-      # consumes: it is copied to apps/portfolio/backend/content-registry.json,
-      # where a Kustomize ConfigMap feeds it to the backend's content-sync Job.
-      #
-      # The manifest is a COMPLETE snapshot — the sync job archives any slug it
-      # owns that the manifest omits — so `npm test` gates this artifact. The
-      # registry suite fails the build on a missing collection, a duplicate
-      # slug, or a schema violation before anything can be published.
-      - name: Upload content registry manifest
+      # The GitOps deployment job consumes this artifact. It is a complete
+      # snapshot, so tests must pass before it can be promoted.
+      - name: Upload content registry
         uses: actions/upload-artifact@v4
         with:
           name: content-registry
@@ -74,8 +69,8 @@ jobs:
 
   container:
     name: Container build and smoke test
-    # The deploy image is built and pushed by container.yaml on master; here we
-    # prove the Dockerfile and nginx config still assemble *and serve*.
+    needs:
+      - build
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
@@ -83,13 +78,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # Plain `docker build`, not buildx. This job only needs the image in the
-      # local daemon so the next step can run it, and dockerd has BuildKit
-      # built in — whereas setup-buildx-action's docker-container driver must
-      # first pull moby/buildkit from Docker Hub, which is a network round trip
-      # that can (and did) time out before any of our code is even read.
-      # The trade-off is no cross-run layer cache on this job; the deploy build
-      # in container.yaml still uses buildx and keeps its cache.
+      # The PR job keeps the image in the local Docker daemon so the actual
+      # nginx configuration can be exercised without publishing anything.
       - name: Build image
         run: |
           docker build \
@@ -98,68 +88,257 @@ jobs:
             -t packetcraft-site:ci \
             .
 
-      - name: Start the container
+      - name: Start container
         run: |
           docker run -d --name site -p 8080:8080 packetcraft-site:ci
+
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
-              echo "container is serving"; exit 0
+              echo "container is serving"
+              exit 0
             fi
+
             sleep 1
           done
-          echo "container did not become ready"; docker logs site; exit 1
 
-      # These probe the real nginx config — try_files, MIME types and cache
-      # headers — which the Node-based test/served-site.test.mjs only imitates.
-      - name: Smoke-test the served site
+          echo "container did not become ready"
+          docker logs site
+          exit 1
+
+      - name: Smoke-test served site
         run: |
           set -euo pipefail
-          base=http://127.0.0.1:8080
-          fail() { echo "FAIL: $*"; docker logs site; exit 1; }
 
-          status() { curl -s -o /dev/null -w '%{http_code}' "$1"; }
-          header() { curl -s -o /dev/null -D - "$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2-; }
+          base=http://127.0.0.1:8080
+
+          fail() {
+            echo "FAIL: $*"
+            docker logs site
+            exit 1
+          }
+
+          status() {
+            curl -s -o /dev/null -w '%{http_code}' "$1"
+          }
+
+          header() {
+            curl -s -o /dev/null -D - "$1" |
+              tr -d '\r' |
+              grep -i "^$2:" |
+              cut -d' ' -f2-
+          }
 
           echo "== health =="
-          [ "$(status $base/healthz)" = 200 ] || fail "/healthz"
 
-          echo "== clean URLs (nginx try_files) =="
-          for path in / /about /blog /projects /reviews \
-                      /blog/building-a-homelab /blog/building-a-homelab/ \
-                      /projects/k3s-cluster /reviews/warframe; do
+          [ "$(status "$base/healthz")" = 200 ] ||
+            fail "/healthz"
+
+          echo "== clean URLs =="
+
+          for path in \
+            / \
+            /about \
+            /blog \
+            /projects \
+            /reviews \
+            /blog/building-a-homelab \
+            /blog/building-a-homelab/ \
+            /projects/k3s-cluster \
+            /reviews/warframe
+          do
             code=$(status "$base$path")
-            [ "$code" = 200 ] || fail "$path returned $code"
+
+            [ "$code" = 200 ] ||
+              fail "$path returned $code"
           done
 
-          echo "== missing routes are 404 =="
-          for path in /nope /blog/does-not-exist; do
+          echo "== missing routes =="
+
+          for path in /nope /blog/does-not-exist
+          do
             code=$(status "$base$path")
-            [ "$code" = 404 ] || fail "$path returned $code, expected 404"
+
+            [ "$code" = 404 ] ||
+              fail "$path returned $code, expected 404"
           done
 
           echo "== discovery endpoints =="
-          for path in /rss.xml /sitemap-index.xml; do
-            [ "$(status $base$path)" = 200 ] || fail "$path"
-            header "$base$path" content-type | grep -qi xml || fail "$path content-type"
+
+          for path in /rss.xml /sitemap-index.xml
+          do
+            [ "$(status "$base$path")" = 200 ] ||
+              fail "$path"
+
+            header "$base$path" content-type |
+              grep -qi xml ||
+              fail "$path content-type"
           done
 
-          echo "== asset MIME types and cache policy =="
-          css=$(curl -s $base/ | grep -o '/_astro/[^"]*\.css' | head -1)
-          [ -n "$css" ] || fail "no stylesheet linked from /"
-          header "$base$css" content-type | grep -qi 'text/css' || fail "css content-type"
-          header "$base$css" cache-control | grep -qi immutable || fail "css should be immutable"
+          echo "== assets and cache policy =="
 
-          # Un-fingerprinted, so it must stay revalidatable.
-          header "$base/og-default.png" content-type | grep -qi 'image/png' || fail "og card type"
-          if header "$base/og-default.png" cache-control | grep -qi immutable; then
+          css=$(
+            curl -s "$base/" |
+              grep -o '/_astro/[^"]*\.css' |
+              head -1
+          )
+
+          [ -n "$css" ] ||
+            fail "no stylesheet linked from /"
+
+          header "$base$css" content-type |
+            grep -qi 'text/css' ||
+            fail "css content-type"
+
+          header "$base$css" cache-control |
+            grep -qi immutable ||
+            fail "css should be immutable"
+
+          header "$base/og-default.png" content-type |
+            grep -qi 'image/png' ||
+            fail "og card type"
+
+          if header "$base/og-default.png" cache-control |
+            grep -qi immutable
+          then
             fail "og-default.png must not be immutable"
           fi
 
-          # HTML must revalidate or a deploy never appears.
-          header "$base/" cache-control | grep -qi 'no-cache' || fail "html should be no-cache"
+          header "$base/" cache-control |
+            grep -qi 'no-cache' ||
+            fail "html should be no-cache"
 
           echo "all container smoke checks passed"
 
-      - name: Stop the container
+      - name: Stop container
         if: always()
         run: docker rm -f site || true
+
+  deploy:
+    name: Publish image and promote deployment
+    needs:
+      - build
+
+    # Pull requests only validate. Master pushes and deliberate manual runs
+    # from master publish and promote.
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch')
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out tested commit
+        uses: actions/checkout@v4
+
+      # This is the registry produced and tested by the build job above.
+      - name: Download content registry
+        uses: actions/download-artifact@v5
+        with:
+          name: content-registry
+          path: registry
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/portfolio-site
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            PUBLIC_API_BASE_URL=/api
+            CONTENT_REVISION=${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Compute image tag
+        id: sha
+        shell: bash
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homelab-cicd-config
+          token: ${{ secrets.CONFIG_REPO_TOKEN }}
+          path: config
+
+      - name: Install Kustomize
+        shell: bash
+        run: |
+          curl -fsSL \
+            "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" |
+            bash
+
+          sudo mv kustomize /usr/local/bin/kustomize
+
+      - name: Copy content registry into GitOps
+        shell: bash
+        run: |
+          cp \
+            registry/content-registry.json \
+            config/apps/portfolio/frontend/content-registry.json
+
+      - name: Update frontend image
+        working-directory: config/apps/portfolio/frontend
+        shell: bash
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/${owner}/portfolio-site"
+
+          kustomize edit set image \
+            "${image}=${image}:${{ steps.sha.outputs.sha }}"
+
+      - name: Validate frontend deployment
+        working-directory: config/apps/portfolio/frontend
+        shell: bash
+        run: kustomize build . >/dev/null
+
+      - name: Commit and push deployment
+        working-directory: config
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            apps/portfolio/frontend/kustomization.yaml \
+            apps/portfolio/frontend/content-registry.json
+
+          if git diff --cached --quiet; then
+            echo "GitOps is already up to date"
+            exit 0
+          fi
+
+          git commit -m "deploy: portfolio ${{ steps.sha.outputs.sha }}"
+
+          # Backend releases may also update this repository.
+          git pull --rebase origin main
+          git push origin HEAD:main
