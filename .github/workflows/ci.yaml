@@ -42,6 +42,9 @@ jobs:
         run: npm run build
         env:
           PUBLIC_API_BASE_URL: /api
+          # Stamped into dist/content-registry.json so a deployed registry can
+          # be traced back to the content that produced it.
+          GITHUB_SHA: ${{ github.sha }}
 
       - name: Smoke-test the built site
         run: npm test
@@ -52,6 +55,22 @@ jobs:
           name: dist
           path: dist
           retention-days: 7
+
+      # Published separately from dist/ because this is the file GitOps
+      # consumes: it is copied to apps/portfolio/backend/content-registry.json,
+      # where a Kustomize ConfigMap feeds it to the backend's content-sync Job.
+      #
+      # The manifest is a COMPLETE snapshot — the sync job archives any slug it
+      # owns that the manifest omits — so `npm test` gates this artifact. The
+      # registry suite fails the build on a missing collection, a duplicate
+      # slug, or a schema violation before anything can be published.
+      - name: Upload content registry manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-registry
+          path: dist/content-registry.json
+          retention-days: 30
+          if-no-files-found: error
 
   container:
     name: Container build and smoke test
@@ -75,6 +94,7 @@ jobs:
         run: |
           docker build \
             --build-arg PUBLIC_API_BASE_URL=/api \
+            --build-arg CONTENT_REVISION=${{ github.sha }} \
             -t packetcraft-site:ci \
             .
 
