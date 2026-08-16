@@ -179,8 +179,8 @@ test("the comment section is a labelled region with a heading", () => {
 
 test("the stats row reserves its height and ships no control", () => {
   if (!apiConfigured) return;
-  // Views, likes and stats are blog-only. Comments are on every reading.
-  for (const post of posts.filter((p) => p.collection === "blog")) {
+  // Views, likes, stats and comments are all on every reading now.
+  for (const post of posts) {
     const row = post.html.match(/<div[^>]*data-post-stats[^>]*>/)?.[0];
     assert.ok(row, `${post.route} has no stats row`);
     assert.match(row, new RegExp(`data-slug="${post.slug}"`), `stats row slug mismatch`);
@@ -198,7 +198,7 @@ test("the stats row reserves its height and ships no control", () => {
 
 test("the view beacon is inert markup and renders nothing visible", () => {
   if (!apiConfigured) return;
-  for (const post of posts.filter((p) => p.collection === "blog")) {
+  for (const post of posts) {
     const beacon = post.html.match(/<span[^>]*data-view-beacon[^>]*>/)?.[0];
     assert.ok(beacon, `${post.route} has no view beacon`);
     assert.match(beacon, /\shidden(\s|>)/, `${post.route} view beacon is not hidden`);

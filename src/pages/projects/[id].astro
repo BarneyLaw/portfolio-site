@@ -2,6 +2,8 @@
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import Comments from "../../components/astro/Comments.astro";
+import PostStats from "../../components/astro/PostStats.astro";
+import ViewCounter from "../../components/astro/ViewCounter.astro";
 import CodeCopy from "../../components/astro/CodeCopy.astro";
 import StatusBadge from "../../components/astro/StatusBadge.astro";
 import Tag from "../../components/astro/Tag.astro";
@@ -108,6 +110,8 @@ const { Content } = await render(project);
     {/* Comments are keyed on the entry id, which is what the backend's content
         registry stores. Registered slugs are global across content types, so
         this must stay unique against blog and review ids — a test enforces it. */}
+    <ViewCounter slug={project.id} />
+    <PostStats slug={project.id} />
     <Comments slug={project.id} enabled={p.comments} />
   </main>
 

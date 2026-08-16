@@ -2,6 +2,8 @@
 import { render } from "astro:content";
 import Layout from "../../layouts/Layout.astro";
 import Comments from "../../components/astro/Comments.astro";
+import PostStats from "../../components/astro/PostStats.astro";
+import ViewCounter from "../../components/astro/ViewCounter.astro";
 import CodeCopy from "../../components/astro/CodeCopy.astro";
 import VerdictBadge from "../../components/astro/VerdictBadge.astro";
 import { getReviews, socialImageOf } from "../../lib/content";
@@ -66,6 +68,8 @@ const { Content } = await render(review);
       <div class="clear-both"></div>
     </div>
 
+    <ViewCounter slug={review.id} />
+    <PostStats slug={review.id} />
     <Comments slug={review.id} enabled={r.comments} />
   </main>
 
