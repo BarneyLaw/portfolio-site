@@ -10,9 +10,9 @@ A personal site (blog · reviews · portfolio · project showcase) built to ship
   vanilla script per page (theme toggle, list filters, nav mascot, copy-code),
   all progressive enhancement.
 - **Backend:** optional, and never a source of content. A Go + Postgres API
-  powers comments, view recording and likes on blog posts; published content is
-  repository-backed and the site stays fully usable with the backend down (see
-  [Backend integration](#backend-integration-go--postgres)).
+  powers comments on every reading plus view recording and likes on blog posts;
+  published content is repository-backed and the site stays fully usable with
+  the backend down (see [Backend integration](#backend-integration-go--postgres)).
 
 The site began as a Figma Make export (a single ~900-line React `App.tsx`) and
 was migrated to this stack in phases. See [Migration history](#migration-history).
@@ -40,7 +40,7 @@ output, so neither may ever hold a secret.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `PUBLIC_SITE_ORIGIN` | `https://packetcraft.dev` | Origin used for canonical tags, the RSS feed and the sitemap. Validated during build: must be a bare `https` origin (or `localhost`) with no path. |
+| `PUBLIC_SITE_ORIGIN` | `https://packetcraft.dev` | Origin used for canonical tags, the RSS feed and the sitemap. Validated during build: must be a bare `https` origin (or `localhost`) with no path. **⚠ The live site currently answers on `https://site.packetcraft.dev`; the apex does not resolve.** Unless the deployment overrides this, canonical URLs, the sitemap and every Open Graph image point at a host that cannot be reached. |
 | `PUBLIC_API_BASE_URL` | `/api` in the container, unset locally | Base for the Go backend. Empty disables every dynamic fragment at build time. See [Backend integration](#backend-integration-go--postgres). |
 | `ADMIN_UI` | unset | Set to `1` to build the Cloudflare Access-protected moderation page. Off by default; a public build contains no admin route or code. See [Administrator surface](#administrator-surface-cloudflare-access). |
 
@@ -71,7 +71,7 @@ bootstrap is `is:inline` (it has to run before first paint).
 | Nav mascot pause | `src/components/astro/Nav.astro` | Parks the walking packet; persisted, and skipped under `prefers-reduced-motion` |
 | Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling `hidden`; unfiltered without JS |
 | Copy-code buttons | `src/components/astro/CodeCopy.astro` | Injects a copy button into each `.mdx-content pre`; nothing renders without JS |
-| Comments (blog posts) | `src/components/astro/Comments.astro` → `src/features/comments/mount.ts` | Dynamically imported when the section nears the viewport; builds the list and form |
+| Comments (all readings) | `src/components/astro/Comments.astro` → `src/features/comments/mount.ts` | Injects a "view comments" button; the module and its request load only when it is pressed |
 | Stats + likes (blog posts) | `src/components/astro/PostStats.astro` → `src/features/post-stats/mount.ts` | Same lazy trigger; fetches totals once and owns the like button |
 | View beacon (blog posts) | `src/components/astro/ViewCounter.astro` | Records one view after a 5s dwell; imports the API client only at that point |
 
@@ -538,16 +538,45 @@ is `PUBLIC_*`, so it ships to the browser and must never hold a secret.
 
 ### Comments (FEAT-204)
 
-Rendered on blog posts by `src/components/astro/Comments.astro`; the UI lives
-in `src/features/comments/mount.ts`.
+Rendered on **every reading — blog posts, projects and reviews** — by
+`src/components/astro/Comments.astro`; the UI lives in
+`src/features/comments/mount.ts`.
 
 - The static page ships **only a shell** — heading, reserved status and list
-  regions, and a `<noscript>` note. No form, no pre-rendered comments.
+  regions, and a `<noscript>` note. No form, no pre-rendered comments, and no
+  button.
+- Comments **open on request**, not on scroll. A script-injected
+  "view comments" control dynamically imports `mount.ts` when pressed, so a
+  page makes *zero* API calls until the reader asks. Reaching the end of a long
+  article is not the same as asking for a comment thread.
+- The opener is injected rather than written into the HTML for the usual
+  reason: without JavaScript it would be a button that does nothing.
 - The form is built by script because the API takes JSON; a plain HTML form
   could not submit to it, and a form that cannot work is worse than none.
-- `mount.ts` is **dynamically imported** when the section nears the viewport,
-  so a reader who never scrolls that far downloads neither it nor the request.
-- Set `comments: false` in a post's frontmatter to close comments on it.
+- Set `comments: false` in an entry's frontmatter to close comments on it.
+  All three collections have the field.
+
+> **Slugs must stay unique across collections.** The backend's
+> `content_items.slug` is a primary key shared by every kind, and the API is
+> keyed on slug alone (`/posts/{slug}/comments`). A project and a review with
+> the same slug would be one row there and their threads would merge.
+> `test/comments.test.mjs` fails if two collections ever collide.
+
+#### Which readings the backend actually accepts
+
+Right now: **blog posts only.** The registry constrains `kind` to
+`('post','project')` — there is no `review` kind — it seeds only the four blog
+slugs, and every dynamic feature goes through a `PublishedPostExists` check
+hard-coded to `kind = 'post'`.
+
+Verified against the live deployment: blog slugs return `200`, project and
+review slugs return `404`. Those pages show *"Comments aren't open for this one
+yet."* and drop the form, which is the honest rendering of an entry the API
+does not know.
+
+To turn them on, the backend needs a forward-only migration that widens the
+`content_items_kind` check, seeds the project and review slugs, and relaxes the
+`kind = 'post'` predicate. Nothing in this repository can do that.
 
 **The rendering rule:** comment bodies and author names are untrusted input
 echoed back to every reader. They are only ever written with `textContent` —
@@ -615,7 +644,7 @@ Not on the frontend, and not on the backend either — the Go API has no login
 endpoint, no password, no session, no refresh token, and issues no admin JWT.
 Authentication happens entirely at Cloudflare's edge:
 
-1. The whole `admin.site.packetcraft.dev` hostname is a deny-by-default
+1. The whole `site-admin.packetcraft.dev` hostname is a deny-by-default
    Cloudflare Access application.
 2. An unauthenticated browser never reaches the origin; Cloudflare serves its
    own identity flow first.
@@ -639,7 +668,7 @@ Rendering a login form would be inventing a second, weaker authority.
 ### Same-origin is a hard requirement
 
 **The backend sets no CORS headers of any kind.** A moderation page served
-from `packetcraft.dev` calling `admin.site.packetcraft.dev` would have every
+from the public site calling `site-admin.packetcraft.dev` would have every
 response blocked by the browser, and the Access cookie would not be sent
 cross-site anyway.
 
@@ -673,7 +702,7 @@ Go middleware. Hiding a control is never authorization.
 
 The admin hostname currently routes only `/api/admin` to the backend. Serving
 the moderation UI needs the GitOps repository to also route
-`admin.site.packetcraft.dev` **non-`/api` paths to an `ADMIN_UI=1` build of
+`site-admin.packetcraft.dev` **non-`/api` paths to an `ADMIN_UI=1` build of
 this site**, with Cloudflare Access covering the entire hostname. Until then
 the page has nowhere to live, and none of this is exercisable end to end.
 

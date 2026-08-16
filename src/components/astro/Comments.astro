@@ -2,9 +2,10 @@
 import { apiConfigured } from "../../lib/api";
 
 interface Props {
-  /** Post slug — the `{slug}` path parameter the API keys comments on. */
+  /** Slug the API keys comments on. Must match the entry's id, which is what
+      the backend's content registry stores. */
   slug: string;
-  /** False when the post closes comments. Renders nothing. */
+  /** False when the entry closes comments. Renders nothing. */
   enabled?: boolean;
 }
 
@@ -28,12 +29,15 @@ const show = enabled && apiConfigured();
         comments
       </h2>
 
-      {/* Everything below is built by the client module. The article above is
-          already complete and does not depend on any of it — a failure here
-          leaves the post exactly as it was. */}
       <p class="text-[13px] font-mono text-muted-foreground mb-5">
         Plain text only. Be decent.
       </p>
+
+      {/* The "view comments" control is injected by the script below rather
+          than rendered here. Without JavaScript it would be a button that does
+          nothing, and nothing on this page is allowed to look clickable and be
+          inert. The <noscript> explains the absence instead. */}
+      <div data-comments-open />
 
       {/* Reserved region. The status line sits above the list so an error or
           a loading message appears in a fixed place instead of pushing the
@@ -51,8 +55,8 @@ const show = enabled && apiConfigured();
 
       <noscript>
         <p class="text-[14px] font-mono text-muted-foreground">
-          Comments need JavaScript — they are loaded from the site's API after the
-          page renders. The post above is complete without them.
+          Comments need JavaScript — they are loaded from the site's API on request.
+          The writeup above is complete without them.
         </p>
       </noscript>
     </section>
@@ -60,24 +64,50 @@ const show = enabled && apiConfigured();
 }
 
 <script>
-  // Load the comment machinery only when the section is actually approaching
-  // the viewport. Most readers of a long post never scroll to the bottom, and
-  // this keeps both the module and its request off their page entirely.
-  import { whenVisible } from "../../lib/when-visible";
-
+  // Comments load on explicit intent, not on scroll. A reader who reaches the
+  // end of a long article has not necessarily asked for a comment thread, and
+  // this way the module and its request belong only to people who want them.
   const section = document.querySelector<HTMLElement>("[data-comments]");
+  const slot = section?.querySelector<HTMLElement>("[data-comments-open]");
 
-  if (section) {
-    whenVisible(section, () => {
-      // Dynamic import: the comment code is not part of the page's initial
-      // script, so a reader who never reaches the section never downloads it.
-      import("../../features/comments/mount")
-        .then(({ mountComments }) => mountComments(section))
-        .catch(() => {
-          // A failed chunk load must not take the article with it.
-          const status = section.querySelector("[data-comments-status]");
-          if (status) status.textContent = "Comments could not be loaded.";
-        });
-    });
+  if (section && slot) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "text-[13px] font-mono px-3 py-1.5 rounded border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+    button.textContent = "view comments";
+    // The button controls the region it fills in, and says so.
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", "comments-thread");
+
+    const list = section.querySelector("[data-comments-list]");
+    list?.setAttribute("id", "comments-thread");
+
+    button.addEventListener(
+      "click",
+      () => {
+        button.disabled = true;
+        button.setAttribute("aria-expanded", "true");
+
+        // Dynamic import: a reader who never asks for comments never
+        // downloads the module or the API client behind it.
+        import("../../features/comments/mount")
+          .then(({ mountComments }) => {
+            button.remove();
+            mountComments(section);
+          })
+          .catch(() => {
+            // A failed chunk load must not take the article with it, and the
+            // reader must be able to try again.
+            button.disabled = false;
+            button.setAttribute("aria-expanded", "false");
+            const status = section.querySelector("[data-comments-status]");
+            if (status) status.textContent = "Comments could not be loaded.";
+          });
+      },
+      { once: false },
+    );
+
+    slot.append(button);
   }
 </script>

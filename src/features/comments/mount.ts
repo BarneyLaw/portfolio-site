@@ -89,7 +89,10 @@ function messageFor(error: unknown): string {
     case "malformed":
       return "The server sent something unexpected.";
     case "http":
-      if (error.status === 404) return "Comments are not available for this post.";
+      // The API answers 404 for any slug its content registry does not hold.
+      // That is not "broken" — it is how an entry that has not been opened for
+      // comments looks, so say that rather than implying a fault.
+      if (error.status === 404) return "Comments aren't open for this one yet.";
       if (error.status === 409) return "This post has reached its comment limit.";
       if (error.status === 413) return "That comment is too large to send.";
       if (error.status === 429) return "Too many comments too quickly. Try again shortly.";
@@ -150,13 +153,14 @@ export function mountComments(section: HTMLElement): () => void {
       setStatus(messageFor(error));
       // Only offer a retry for failures where retrying makes sense.
       if (!(error instanceof ApiError) || error.retryable) actionsEl.prepend(retryButton);
-      // The post is not registered with the backend: there is nothing to load
-      // and nothing to post to, so take the form away rather than let someone
-      // write a comment that cannot land.
+      // The entry is not in the backend's content registry: there is nothing
+      // to load and nothing to post to. Remove the form outright rather than
+      // let someone write a comment that cannot land, and drop the retry —
+      // retrying will 404 just as fast.
       if (error instanceof ApiError && error.status === 404) {
         closed = true;
-        submit.disabled = true;
-        form.hidden = true;
+        form.remove();
+        retryButton.remove();
       }
     } finally {
       loading = false;
