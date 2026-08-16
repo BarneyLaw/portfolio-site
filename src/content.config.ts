@@ -17,10 +17,19 @@ const isoDate = z
     See the publication rules in src/lib/content.ts. */
 const draft = z.boolean().default(false);
 
-/** Set false to close comments on one entry. Every reading type supports them.
-    The section also needs the backend configured at build time *and* the slug
-    registered in the API's content registry — see src/lib/comments.ts. */
-const comments = z.boolean().default(true);
+/**
+ * Whether this entry accepts comments. **Defaults to false**, deliberately.
+ *
+ * This value is not just a UI switch: it is published to the backend as
+ * `comments_enabled` in the content registry (see src/lib/registry.ts), and the
+ * API refuses comment listing and creation unless it is true. Defaulting to
+ * false means a new entry cannot silently open a public write surface — opening
+ * one is always an explicit `comments: true` in frontmatter.
+ *
+ * The backend contract spells this out: "Only content whose frontmatter or JSON
+ * explicitly sets `comments: true` should emit `comments_enabled: true`."
+ */
+const comments = z.boolean().default(false);
 
 /**
  * Media fields, shared by all three collections. The two image slots had
