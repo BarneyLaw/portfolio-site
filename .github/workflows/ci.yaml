@@ -288,14 +288,40 @@ jobs:
           token: ${{ secrets.CONFIG_REPO_TOKEN }}
           path: config
 
+      # Pinned release tarball rather than the upstream install script.
+      #
+      # That script is fetched from `master` — a moving target — and resolves
+      # "latest" through the unauthenticated GitHub API at run time. Shared
+      # runner IPs get rate-limited, the lookup returns an empty string, and it
+      # fails with `Version  does not exist or is not available for
+      # linux/amd64`, which is a confusing way to be told "you were throttled".
+      #
+      # A pinned URL has no lookup step and gives the same binary every run.
+      # Bump KUSTOMIZE_VERSION deliberately; the checksum must be updated with
+      # it, and `sha256sum -c` will fail loudly if the two disagree.
       - name: Install Kustomize
         shell: bash
+        env:
+          KUSTOMIZE_VERSION: v5.7.1
+          KUSTOMIZE_SHA256: ea375e7372f9aa029129d4b2d16c66b7750b7f1213c4f66f910d981c895818d8
         run: |
-          curl -fsSL \
-            "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" |
-            bash
+          set -euo pipefail
 
-          sudo mv kustomize /usr/local/bin/kustomize
+          url="https://github.com/kubernetes-sigs/kustomize/releases/download"
+          url="${url}/kustomize%2F${KUSTOMIZE_VERSION}"
+          url="${url}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+
+          # --retry rides out a transient blip rather than failing the deploy
+          # after the image has already been pushed.
+          curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors -o kustomize.tar.gz "$url"
+
+          echo "${KUSTOMIZE_SHA256}  kustomize.tar.gz" | sha256sum -c -
+
+          tar -xzf kustomize.tar.gz kustomize
+          sudo install -m 0755 kustomize /usr/local/bin/kustomize
+          rm -f kustomize kustomize.tar.gz
+
+          kustomize version
 
       - name: Copy content registry into GitOps
         shell: bash
