@@ -74,8 +74,8 @@ bootstrap is `is:inline` (it has to run before first paint).
 | Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling `hidden`; unfiltered without JS |
 | Copy-code buttons | `src/components/astro/CodeCopy.astro` | Injects a copy button into each `.mdx-content pre`; nothing renders without JS |
 | Comments (all readings) | `src/components/astro/Comments.astro` → `src/features/comments/mount.ts` | Injects a "view comments" button; the module and its request load only when it is pressed |
-| Stats + likes (blog posts) | `src/components/astro/PostStats.astro` → `src/features/post-stats/mount.ts` | Same lazy trigger; fetches totals once and owns the like button |
-| View beacon (blog posts) | `src/components/astro/ViewCounter.astro` | Records one view after a 5s dwell; imports the API client only at that point |
+| Stats + likes (all readings) | `src/components/astro/PostStats.astro` → `src/features/post-stats/mount.ts` | Same lazy trigger; fetches totals once and owns the like button |
+| View beacon (all readings) | `src/components/astro/ViewCounter.astro` | Records one view after a 5s dwell; imports the API client only at that point |
 
 That's the complete client-side JS inventory. Everything else — pagination,
 the table of contents, syntax highlighting, filtering's default state — is
@@ -105,6 +105,7 @@ the TypeScript source directly (Node strips the types, so no build step).
 | `test/comments.test.mjs` | The XSS rule across every feature module, that only `api.ts` calls `fetch`, and the shipped comment and stats shells |
 | `test/content-contract.test.mjs` | FEAT-202: pages never import an API module or call `getCollection`, no migration or content table exists, and every detail route carries its body in the HTML |
 | `test/content-registry.test.mjs` | The generated manifest: schema validity, full collection coverage, drafts included, explicit `comments_enabled`, sorted unique slugs |
+| `test/stats-cache.test.mjs` | The stats memo: TTL boundary, future timestamps, tampered entries, unavailable storage |
 | `test/admin-surface.test.mjs` | No build ships a login form or token storage, public builds contain no admin code at all, and admin stays out of sitemap/feed/robots |
 
 There is no browser and no browser dependency. `test/served-site.test.mjs`
@@ -720,7 +721,21 @@ Three separate things, deliberately in different modules:
 | Liking | same module | `PUT`/`DELETE /posts/{slug}/like` |
 
 **No polling anywhere.** Totals are a fetch-once-on-view number, not a live
-counter; a reader who wants a fresh figure reloads. The server deduplicates
+counter; a reader who wants a fresh figure reloads.
+
+**Stats are memoised for 60s in `sessionStorage`** (`readCachedStats` /
+`writeCachedStats`). Every navigation on this site is a fresh document, so
+without it, browsing four posts and returning to the first would re-query
+/stats five times for numbers that barely move. A warm visit paints instantly
+and makes no request at all.
+
+Deliberately stats-only — a comment thread that omits the comment you just
+posted is worse than a re-fetch. The entry is validated on the way back in
+(sessionStorage is user-writable) and rewritten after a like, so navigating
+away and back never shows the pre-like total. This is a client-side memo only:
+the API still sends `Cache-Control: no-store` and `apiRequest` still uses
+`cache: "no-store"`, so a request that *is* made is never served from the HTTP
+cache. The server deduplicates
 views per visitor per rolling window, so a refresh does not inflate anything.
 
 `views.ts` is split from `stats.ts` because the view beacon runs on every post
