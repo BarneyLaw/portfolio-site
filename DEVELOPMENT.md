@@ -40,7 +40,7 @@ output, so neither may ever hold a secret.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `PUBLIC_SITE_ORIGIN` | `https://packetcraft.dev` | Origin used for canonical tags, the RSS feed and the sitemap. Validated during build: must be a bare `https` origin (or `localhost`) with no path. **⚠ The live site currently answers on `https://site.packetcraft.dev`; the apex does not resolve.** Unless the deployment overrides this, canonical URLs, the sitemap and every Open Graph image point at a host that cannot be reached. |
+| `PUBLIC_SITE_ORIGIN` | `https://site.packetcraft.dev` | Origin used for canonical tags, the RSS feed, the sitemap and Open Graph URLs. Validated during build: must be a bare `https` origin (or `localhost`) with no path. Must be the host the site is genuinely reachable at — the apex `packetcraft.dev` does not resolve, and pointing this there tells crawlers the canonical URL is a dead host. |
 | `PUBLIC_API_BASE_URL` | `/api` in the container, unset locally | Base for the Go backend. Empty disables every dynamic fragment at build time. See [Backend integration](#backend-integration-go--postgres). |
 | `DEV_API_TARGET` | `https://site.packetcraft.dev` | Where `astro dev` proxies `/api`. Dev only — never affects a build. Point it at a local Go process to keep dev writes off production. |
 | `CONTENT_REVISION` | `GITHUB_SHA`, else `git rev-parse HEAD` | Commit id stamped into `dist/content-registry.json`. Required for container builds — `.dockerignore` excludes `.git`. |
