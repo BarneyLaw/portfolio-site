@@ -76,7 +76,13 @@ const adminUi = {
 // a build arg). Validated here rather than at render time: a malformed origin
 // silently produces a sitemap full of broken URLs, and the build is the last
 // moment anyone is watching.
-const DEFAULT_ORIGIN = "https://packetcraft.dev";
+// This must be the hostname the site is actually reachable at, not the
+// prettiest one: it is what canonical tags tell crawlers to index, what the
+// sitemap and RSS feed point at, and what every Open Graph image resolves
+// against. It was the bare apex, which does not resolve — so the live site was
+// telling Google its canonical URL was an unreachable host, and every shared
+// link previewed against one too.
+const DEFAULT_ORIGIN = "https://site.packetcraft.dev";
 const rawOrigin = process.env.PUBLIC_SITE_ORIGIN?.trim() || DEFAULT_ORIGIN;
 
 let site;
