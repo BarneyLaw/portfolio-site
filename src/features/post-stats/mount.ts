@@ -10,8 +10,10 @@
 import { ApiError } from "../../lib/api";
 import {
   getPostStats,
+  readCachedStats,
   readLocalLike,
   setPostLiked,
+  writeCachedStats,
   writeLocalLike,
 } from "../../lib/stats";
 
@@ -37,6 +39,9 @@ export function mountPostStats(root: HTMLElement): () => void {
   // Local memory only — the API has no per-visitor read. See src/lib/stats.ts.
   let liked = readLocalLike(slug);
   let likes = 0;
+  // Kept alongside `likes` so the cache can be rewritten after a like without
+  // re-fetching just to learn the view count again.
+  let views = 0;
   let busy = false;
 
   const viewsEl = document.createElement("span");
@@ -84,6 +89,10 @@ export function mountPostStats(root: HTMLElement): () => void {
     try {
       await setPostLiked(slug, liked, controller.signal);
       writeLocalLike(slug, liked);
+      // Keep the memo in step with what the reader just did, or navigating
+      // away and back within the TTL would show the pre-like total and look
+      // like the like was lost.
+      writeCachedStats(slug, { views, likes });
       statusEl.textContent = "";
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -105,16 +114,32 @@ export function mountPostStats(root: HTMLElement): () => void {
     if (spinner) spinner.hidden = !busy;
   };
 
+  /** Renders a set of totals and reveals the control they belong to. */
+  const show = (stats: { views: number; likes: number }) => {
+    views = stats.views;
+    likes = stats.likes;
+    viewsEl.textContent = plural(views, "view", "views");
+    paint();
+    // Only offer the control once the totals it mutates are known.
+    root.append(viewsEl, likeButton);
+    statusEl.textContent = "";
+  };
+
   (async () => {
+    // A recent snapshot from this browsing session paints straight away — no
+    // spinner, no request. Every navigation is a fresh document on this site,
+    // so without it, revisiting a post re-queries totals that barely move.
+    const cached = readCachedStats(slug);
+    if (cached) {
+      show(cached);
+      return;
+    }
+
     setLoading(true);
     try {
       const stats = await getPostStats(slug, controller.signal);
-      likes = stats.likes;
-      viewsEl.textContent = plural(stats.views, "view", "views");
-      paint();
-      // Only offer the control once the totals it mutates are known.
-      root.append(viewsEl, likeButton);
-      statusEl.textContent = "";
+      show(stats);
+      writeCachedStats(slug, stats);
     } catch (error) {
       if (controller.signal.aborted) return;
       // No numbers means no meaningful like button either, so show nothing
