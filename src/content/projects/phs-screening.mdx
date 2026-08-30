@@ -1,0 +1,114 @@
+---
+name: "PHS Screening Operations App"
+status: SHIPPED
+order: 3
+tags: ["React", "Express", "MongoDB", "JWT"]
+meta: "Jul–Aug 2025 · React · Express · MongoDB"
+description: "An operational web application used by volunteers to move roughly a thousand participants through a multi-station annual health screening."
+codeSnippet: |-
+  POST /api/forms/:formCollection/:patientId
+  Authorization: Bearer <token>
+  { "data": { "...": "station measurements" } }
+links:
+  - label: "frontend"
+    href: "https://github.com/phs-screening/phs-app"
+  - label: "backend"
+    href: "https://github.com/phs-screening/phs-app-backend"
+comments: true
+---
+
+## Reworking the data boundary of a live screening system
+
+The PHS screening application is not a greenfield demo. It is a multi-year web
+system used during an annual health screening where volunteers move roughly a
+thousand participants through registration, assessment stations, consultations,
+and report generation. During the event, the software is part of the operating
+workflow: a delayed form or an inconsistent patient record becomes a queue of
+real people.
+
+I joined the 2025 development cycle in July and August. My work covered a set
+of geriatric cognitive-assessment forms, followed by a larger migration away
+from MongoDB Realm calls made by the browser and towards a custom Express API.
+The second part was the more important architectural change because it moved
+database access and authentication behind a boundary the team controlled.
+
+## The system I was changing
+
+The frontend was a React application built with Vite and Material UI. It had a
+large set of station-specific forms, patient dashboards, volunteer management,
+and PDF/report code. MongoDB stored patient, profile, queue, station-count, and
+form documents.
+
+Before the migration, much of the frontend depended directly on Realm-specific
+access patterns. That made the browser aware of database collections and spread
+data-access behaviour through files such as `api.jsx` and `mongoDB.js`. It also
+made replacing the backend difficult: callers depended on the vendor interface,
+not on operations from the screening domain.
+
+The target architecture introduced an Express server using the MongoDB driver.
+The browser called HTTP endpoints, a shared client attached a bearer token, and
+backend middleware verified the JWT before protected handlers reached the
+database. Public pre-registration and login/signup remained explicit exceptions;
+patient records, form submission, station counts, profiles, and administrative
+operations were authenticated.
+
+## Migrating without stopping feature work
+
+This could not be a clean rewrite. The application already had many forms and
+call sites, so I kept compatibility functions while changing their internals.
+The first frontend pass added a small API client, moved login and profile flows,
+and replaced Realm reads and writes in the shared MongoDB service. A second pass
+converted more of `api.jsx`, volunteer management, and password-reset flows.
+
+On the backend I implemented the corresponding routes for profile lookup,
+patient names and records, saved form data, station counters, the PDF queue,
+pre-registration, patient creation, form upserts, login/signup, account
+deletion, password reset, and form-status queries. Most protected routes shared
+the same authentication middleware instead of reimplementing token checks.
+
+The form write path illustrates the seam. The frontend submitted a patient ID,
+form identifier, and form data over HTTP. The server selected the required
+collection, upserted the form document, and updated the patient record that
+tracked completion. The browser still received the data shape its existing
+screens expected, but it no longer needed database credentials or a Realm SDK
+to perform the operation.
+
+## Where correctness mattered
+
+The main risk was behavioural drift. A migration can return valid JSON and
+still be wrong if an old caller expects a missing document to be `null`, a
+counter update to be atomic, or a form submission to update two records. I had
+to trace how data was consumed across dashboards and station forms rather than
+translating calls one line at a time.
+
+The geriatric cognitive forms had a different kind of complexity. They encoded
+several assessments with conditional inputs and scoring rules, so a field's UI
+state and its stored representation had to agree. That work made the later API
+migration less abstract: I had already seen how a seemingly generic form payload
+could carry station-specific assumptions.
+
+The system did not use WebSockets for every screen. "Real time" in the event
+context meant that volunteers at different stations worked against the same
+current patient state and queue data, with refreshes and navigation causing the
+latest records to be loaded. The important property was operational consistency,
+not an animated live dashboard.
+
+## What the first API version got wrong
+
+The initial server concentrated many routes in one large file, and several
+endpoints still accepted collection-oriented parameters. That was a useful
+intermediate step away from direct Realm access, but not the final design: it
+preserved too much knowledge of the database in the client and made validation
+hard to apply consistently.
+
+The repository has since moved towards domain API modules on the frontend and
+controller/service/repository modules on the backend. That later structure
+confirms the direction I would take now: define patient, form, queue, and station
+operations explicitly; validate request and response data at the boundary; and
+keep collection names entirely inside repositories.
+
+My 2025 contribution was not the whole screening platform. It was a focused
+slice: assessment forms and the first controlled API boundary replacing direct
+vendor calls. Working inside a system with years of accumulated behaviour taught
+me that a safe migration is less about producing a cleaner diagram and more
+about preserving the operational invariants people already depend on.
