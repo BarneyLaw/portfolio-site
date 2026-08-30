@@ -71,7 +71,7 @@ bootstrap is `is:inline` (it has to run before first paint).
 | Theme bootstrap | `src/layouts/Layout.astro` `<head>` | `is:inline`; applies the saved theme before paint so there is no flash |
 | Theme toggle | `src/layouts/Layout.astro` | Flips `.dark`, persists to `localStorage`, keeps `aria-pressed` in sync |
 | Nav mascot pause | `src/components/astro/Nav.astro` | Parks the walking packet; persisted, and skipped under `prefers-reduced-motion` |
-| Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling `hidden`; unfiltered without JS |
+| Projects / Reviews filters | `src/pages/projects/index.astro`, `src/pages/reviews/index.astro` | Show/hide cards by toggling `hidden`; unfiltered without JS. `/reviews` filters on two axes (type AND tag) and restores them from `?type=`/`?tag=` |
 | Copy-code buttons | `src/components/astro/CodeCopy.astro` | Injects a copy button into each `.mdx-content pre`; nothing renders without JS |
 | Comments (all readings) | `src/components/astro/Comments.astro` → `src/features/comments/mount.ts` | Injects a "view comments" button; the module and its request load only when it is pressed |
 | Stats + likes (all readings) | `src/components/astro/PostStats.astro` → `src/features/post-stats/mount.ts` | Same lazy trigger; fetches totals once and owns the like button |
@@ -226,10 +226,17 @@ dynamic and enumerate their pages with `getStaticPaths()`.
   [backend integration](#backend-integration-go--postgres) candidate; no
   endpoint exists for it yet.
 - **`reviews/index.astro`** — List from `getReviews()`, same filter pattern as
-  projects but keyed on `data-type` (hardware/software). Cards link to
-  `/reviews/:id`.
+  projects but with **two independent axes**, ANDed: `data-type`
+  (hardware/software, buttons keyed `data-filter`) and `data-tags` (free-form
+  tags from `getReviewTags()`, buttons keyed `data-tag-filter`). The selection
+  is mirrored into `?type=` / `?tag=` with `replaceState` so a filtered list can
+  be linked, and restored from those params on load — unknown values are
+  ignored rather than leaving every button unpressed. Because two axes can
+  select nothing, the list has an empty state (`#review-empty`), which ships
+  `hidden` so a non-JS reader never sees it. Cards link to `/reviews/:id`.
 - **`reviews/[id].astro`** — One page per review. Renders the MDX body next to a
-  sidebar with the verdict badge and meta (type, date).
+  sidebar with the verdict badge and meta (type, date). Tags render as links to
+  `/reviews?tag=<slug>`.
 
 ### Layout (`src/layouts/Layout.astro`)
 The single HTML shell. Props: `title`, `description`. Responsibilities:
@@ -269,6 +276,7 @@ getBlogPost(id)
 getFeaturedPost()        // the featured rule, in one place
 getReviews()             // published, newest first then id
 getReview(id)
+getReviewTags()          // tag facets: slug, label, count — most-used first
 socialImageOf(entry)     // coverArt ?? image, for the social card
 ```
 
@@ -380,10 +388,36 @@ type: HARDWARE            # HARDWARE | SOFTWARE
 verdict: RECOMMENDED      # RECOMMENDED | MIXED | PASS
 date: "2026-07-01"
 excerpt: "One-liner shown in the list."
+tags: ["mod-review", "game"]   # optional, free-form; defaults to []
 ---
 
 The review body (rendered on the detail page).
 ```
+
+#### Review tags
+
+`tags` is free-form — there is no allowlist, and a new tag exists as soon as
+you type it in frontmatter. A tag appears as a pill on the card and the detail
+page, and as a filter button on `/reviews`; the button disappears again when
+the last review carrying it is removed or unpublished, because the list is
+derived from the entries rather than maintained separately.
+
+Tags are **matched on their normalised form**, `tagSlug()` in
+`src/lib/tags.ts`: lowercased, with every run of non-alphanumeric characters
+collapsed to one hyphen. So `"Mod Review"`, `"mod review"` and `"mod-review"`
+are one tag, and the slug is what goes into `data-tags` and `?tag=`. The
+authored spelling is still what a reader sees.
+
+Two things are rejected at build time rather than rendering as a broken pill:
+
+| Frontmatter | Why it fails |
+| --- | --- |
+| `tags: ["IDE", "ide"]` | the same tag twice once normalised |
+| `tags: ["   "]` or `tags: ["///"]` | nothing left to slug — an unmatchable blank pill |
+
+`projects` also has a `tags` field. It is a *different*, required field
+describing a stack and is not normalised or filterable; the two are
+deliberately not shared.
 
 ---
 
