@@ -6,7 +6,9 @@ import PostStats from "../../components/astro/PostStats.astro";
 import ViewCounter from "../../components/astro/ViewCounter.astro";
 import CodeCopy from "../../components/astro/CodeCopy.astro";
 import VerdictBadge from "../../components/astro/VerdictBadge.astro";
+import Tag from "../../components/astro/Tag.astro";
 import { getReviews, socialImageOf } from "../../lib/content";
+import { tagSlug } from "../../lib/tags";
 
 export async function getStaticPaths() {
   const reviews = await getReviews();
@@ -39,10 +41,30 @@ const { Content } = await render(review);
     <div class="text-[12px] font-mono text-muted-foreground mb-2">
       {r.date} · {r.type.toLowerCase()}
     </div>
-    <div class="flex items-center gap-3 mb-6">
+    <div class="flex items-center gap-3 mb-3">
       <h1 class="font-bold font-mono text-[26px] text-foreground">{r.name}</h1>
       <VerdictBadge verdict={r.verdict} />
     </div>
+
+    {/* Each tag links back to the list, pre-filtered to it. A plain link, so
+        it still works with JavaScript off: the list then shows everything,
+        which is the same unfiltered page the reader would have got anyway. */}
+    {
+      r.tags.length > 0 && (
+        <ul class="flex gap-2 flex-wrap mb-6 list-none p-0 m-0">
+          {r.tags.map((t) => (
+            <li>
+              <a
+                href={`/reviews?tag=${encodeURIComponent(tagSlug(t))}`}
+                class="inline-block rounded hover:opacity-70 transition-opacity"
+              >
+                <Tag>{t}</Tag>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
 
     {/* The sidebar floats rather than taking a grid column, so it ends with its
         own content and the writeup reflows into the full width underneath it. */}
