@@ -1,0 +1,52 @@
+---
+name: "CS1101S Programming Methodology (NUS)"
+type: "SOFTWARE"
+verdict: "RECOMMENDED"
+date: "2026-08-30"
+excerpt: "An absurdly demanding introduction to programming that may consume half your semester, then quietly become the foundation for the rest of your degree."
+tags: ["course", "programming", "functional-programming", "nus"]
+image: "../../img/review/cs1101s.webp"
+coverArt: "../../img/review/cs1101s.webp"
+imageAlt: "Programming abstractions and the Source language"
+comments: true
+---
+
+CS1101S was my first proper introduction to programming, although technically it was not my first attempt. I had completed CS50 before entering NUS, but very little of it seemed to remain in my brain. Whatever knowledge I once had apparently got garbage-collected before university started.
+
+That made CS1101S both a beginning and a trial by fire. It was extremely tough, relentlessly time-consuming, and capable of taking up what felt like 50% of an entire semester by itself. I still recommend it.
+
+Why recommend something that causes an existential crisis in week two? Because this module does not merely teach you how to make a program produce the correct output. It tries to build a model of what a program *is*.
+
+## Content overview
+
+The module uses Source, a deliberately restricted subset of JavaScript inspired by the *Structure and Interpretation of Computer Programs* tradition. Instead of giving you the whole language at once, it introduces successive versions with more expressive power. The restrictions can feel artificial, but they force you to solve problems using the idea currently being taught instead of escaping through a convenient language feature.
+
+We began with expressions, functions and procedural abstraction. Then recursion appeared in week two, when I was still trying to understand why a function would want to call itself. This was my first major headache. Higher-order functions came shortly after and produced an even worse one: functions were no longer just named blocks of instructions, but values that could be passed around, returned and composed.
+
+The first half continued through data abstraction, pairs, lists, trees, sorting and searching. It taught programming through a strangely mathematical lens. Rather than thinking mainly in terms of variables being updated line by line, we often described a computation as the evaluation of expressions. That approach initially made simple tasks feel unnecessarily alien, but it also exposed the structure beneath the syntax.
+
+After the midterm, mutation arrived. Source gained variables, assignments and the stateful behaviour that most beginners probably expected from day one. We then moved into arrays, streams, object-oriented programming and the environment model. The CSE machine and environment diagrams were especially painful for me. I could mechanically follow parts of them, but I never felt that I truly understood the whole machine while taking the module.
+
+The final stretch turned inward and examined the language itself. We studied how programs are evaluated and built a meta-circular evaluator: an evaluator for Source written using Source-like ideas. It is a wonderful conclusion in retrospect. At the start of the semester, you are struggling to write a recursive function. By the end, the module is asking you to reason about the machinery that gives the language meaning. Completely reasonable progression, right?
+
+## The workload is the curriculum
+
+CS1101S has missions, paths, studios and contests, so there is almost always something waiting to be done. The assignments are not side exercises attached to the lectures; they are where much of the learning happens. Graphics, sound and other visual problems make abstract ideas tangible, while the Source Academy gives the module a playful identity that most foundational courses lack.
+
+The robot-building assignment was the clearest demonstration of how deep the abstraction stack goes. We wrote Source code that was compiled all the way down for a LEGO robot. Seeing a small educational language eventually become instructions that moved physical hardware was slightly insane in the best possible way. A programming language stopped being a magical text format and became one layer in a long translation pipeline.
+
+That moment also captured what I like about computer science. You can begin with an elegant function, descend through compilers and instruction representations, and end with voltages causing motors to turn. The module offers glimpses of that entire world unusually early.
+
+## Assessments
+
+The exams were brutal. Some questions felt ridiculously difficult and, in the moment, honestly unfair. The cohort was also frighteningly capable, which did not help. You can spend the semester being repeatedly humbled by both the paper and the person sitting two rows away.
+
+Still, the difficulty was not meaningless. CS1101S expects you to reason about unfamiliar programs rather than repeat a memorised recipe. That is valuable, even if the calibration sometimes felt excessive. My complaint is not that it demanded real understanding; it is that the leap between demanding and punishing could become rather thin.
+
+## Verdict
+
+CS1101S is an excellent start to an NUS Computer Science degree precisely because it refuses to be a lightweight tour of syntax. It introduces abstraction, recursion, functional programming, data structures, state and interpreters before most students have found a comfortable editor theme.
+
+It will consume time. It may make you question whether you know anything at all. But once later modules begin discussing objects, algorithms, compilers or execution models, you realise that CS1101S had already planted many of those ideas. I would not call the experience gentle, but I would call it worthwhile.
+
+*This review reflects the semester I took. Teaching teams, assessments and topic order can change.*

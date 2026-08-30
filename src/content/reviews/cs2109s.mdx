@@ -1,0 +1,54 @@
+---
+name: "CS2109S Introduction to AI and Machine Learning (NUS)"
+type: "SOFTWARE"
+verdict: "MIXED"
+date: "2026-08-30"
+excerpt: "A useful map of classical AI and modern ML architectures, taught at such altitude that I often did not know enough to know what to ask."
+tags: ["course", "artificial-intelligence", "machine-learning", "nus"]
+image: "../../img/review/cs2109s.webp"
+coverArt: "../../img/review/cs2109s.webp"
+imageAlt: "Search trees and machine-learning models"
+comments: true
+---
+
+CS2109S was the first module in a long time where I did not ask questions, not because everything was clear, but because I did not know what to ask.
+
+The concepts were presented at an extremely high level—up in the sky, abstracted beyond all ends. I could often repeat what a model was intended to do without feeling that I understood why its internals should work. That is an uncomfortable form of knowledge: enough vocabulary to describe the architecture, but not enough grip to interrogate it.
+
+I still see value in the module. Understanding the broad families of AI and machine-learning systems is useful, especially now that these systems appear everywhere. I just found very little joy in the way the material came together.
+
+## Content overview
+
+The module connects classical artificial intelligence and machine learning through the idea of search. In the classical portion, an agent explores possible states to reach a goal or choose an action. Breadth-first, depth-first and uniform-cost search establish different exploration strategies. Heuristics make informed methods such as A* more efficient, while local search trades a complete path for movement through a landscape of candidate solutions.
+
+Adversarial search adds an opponent. Minimax models players choosing actions against each other, and alpha-beta pruning avoids exploring branches that cannot affect the final decision. This part has an intuitive connection to games: the algorithm searches possible futures while assuming the other player is also trying to win.
+
+The machine-learning portion shifts from explicitly searching states to learning patterns from data. Supervised learning covers models for prediction and classification, while unsupervised learning looks for structure without labelled answers. Model validation asks whether performance on known data will survive contact with new examples.
+
+We encountered methods such as decision trees, linear and logistic regression, clustering and dimensionality reduction before moving towards neural networks and modern architectures. At a high level, layers transform representations, training adjusts parameters to reduce error, and different architectural choices suit different kinds of input or dependency.
+
+That overview is broad and undeniably useful. It gives names and rough shapes to systems that would otherwise remain one undifferentiated cloud labelled “AI.”
+
+## Abstraction without enough anchoring
+
+My problem was not that the module avoided deriving every equation from first principles. An introductory course must choose its depth, and the field is far too large to rebuild all its mathematics in one semester. The problem was that the abstraction sometimes floated without enough anchors.
+
+When a model was introduced, I wanted a clearer path between the mathematics, the algorithm and the code. What assumptions make this objective sensible? What exactly does the optimiser change? Why should this representation capture the structure we care about? What breaks when the assumptions fail?
+
+Instead, some mathematical ideas appeared as dense pieces of machinery to be accepted and deployed. The logic could be technically present while remaining psychologically remote. You can stare at a gradient expression and know which symbols to differentiate without developing any intuition for the geometry of the update.
+
+That experience is partly personal. I enjoy modules where abstractions eventually descend into mechanisms: packets become frames, programs become instructions, and processes become scheduled execution. Machine learning often moves in the other direction. A large collection of numerical operations becomes a model whose learned representation is difficult to inspect. That can be powerful, but it is not automatically fun.
+
+## Assignments and the capstone
+
+The assignments did little to change my view. They felt more like exercises in applying a supplied method than opportunities to discover how a system worked. The capstone project became a grind of waiting and “vibe coding”: change something, run the experiment, wait for the result, and hope the metric moves in the correct direction.
+
+Experimentation is genuinely part of machine learning, but the feedback loop can be miserable when training takes time and the reason for a result is unclear. A failed ordinary program often gives you a reproducible path and a stack trace. A disappointing model gives you a number and invites you to reconsider the data, architecture, hyperparameters, training process or perhaps the alignment of the planets.
+
+## Verdict
+
+CS2109S is mixed for me. The survey of search, learning and model architectures is useful. I came away better able to identify the major components behind many AI systems and to understand the broad problem each method addresses.
+
+But the high-level treatment, thin mathematical intuition and uninspiring assignments made the experience feel detached from the computer science I enjoy. I learned the map without ever wanting to live in the territory.
+
+*This review reflects the semester I took. CS2109S has evolved over time, so current topics and project formats may differ.*

@@ -1,0 +1,56 @@
+---
+name: "ST2334 Probability and Statistics (NUS)"
+type: "SOFTWARE"
+verdict: "NOT_RECOMMENDED"
+date: "2026-08-30"
+excerpt: "A compulsory probability and statistics module that felt low-effort, detached from computing and far more aligned with data analysis than the CS I wanted to study."
+tags: ["course", "statistics", "probability", "nus"]
+image: "../../img/review/st2334.webp"
+coverArt: "../../img/review/st2334.webp"
+imageAlt: "Probability distributions and statistical analysis"
+comments: true
+---
+
+ST2334 was an L. I would not recommend it, and the only complication is that Computer Science students may have to take it anyway.
+
+Probability and statistics are important. Networks are noisy, systems fail, experiments produce uncertain results, and performance measurements vary. My complaint is not that the subject has no relationship to computing. It is that the module I experienced made almost no effort to build that relationship.
+
+The result felt low-effort from every direction: AI-narrated or recorded lectures, tutorials with very little energy, and a cohort completing the work because the curriculum required it. When nobody appears to care, compulsory material becomes a weekly tax.
+
+## Content overview
+
+The course covers the foundations of probability and statistical inference. Basic probability rules describe events and outcomes, while conditional probability and independence formalise how information changes likelihood. Random variables turn outcomes into numerical quantities, and common discrete and continuous distributions provide models for different kinds of uncertainty.
+
+Expectations and variance describe the centre and spread of a distribution. Joint distributions, covariance and correlation examine relationships between variables. Sampling distributions and limit results explain why statistics calculated from data behave predictably as sample sizes grow.
+
+The later material moves towards inference: estimating unknown parameters, constructing confidence intervals and testing hypotheses. Regression models relationships between variables and provides tools for prediction and explanation.
+
+This is all legitimate, widely useful material. Data science and analytics rely on it directly, while empirical computer science needs it whenever claims are based on measurements rather than proof.
+
+## The missing computer
+
+Only one worksheet stood out to me as resembling computer-science work: a question involving downtime and site reliability engineering. That example immediately made the statistics feel relevant. Reliability is probabilistic. Services fail and recover. Engineers need to estimate availability, reason about rare events and decide whether an observed change is meaningful.
+
+Why was there so little of that?
+
+A computing-oriented statistics course has an enormous supply of examples. Model packet loss and retry behaviour. Compare latency distributions rather than reporting only an average. Estimate whether a performance optimisation produces a real improvement. Analyse cache hit rates, disk failures, randomized algorithms, A/B tests or error rates in classifiers. Show why the tail of a latency distribution matters when a request depends on many services.
+
+The mathematics need not become less rigorous. Applications can provide the reason to care about the definitions. A confidence interval is easier to remember when it answers a question you might actually ask about a system.
+
+Instead, the module felt directed mainly towards generic data analysis. That suits students interested in data science, but it did not connect with the aspects of computing that brought me into the degree: systems, networks, graphics and the machinery of computers themselves.
+
+## Delivery matters
+
+The presentation made the disconnection worse. The lecture format in my semester felt impersonal and low-effort, and the tutorials did not supply the missing enthusiasm. Statistics already asks students to move between formulas, assumptions and interpretation. It needs careful explanation, good visual examples and discussion of what a result does—and does not—justify.
+
+Without that, procedures become buttons pressed on paper: identify a distribution, substitute values, compute a test statistic, reject or fail to reject. The dangerous part is that a student can execute the procedure while misunderstanding the inference. Statistical tools are most valuable when they make our uncertainty explicit, not when they produce an authoritative-looking decimal.
+
+I also recognise that module experiences are highly dependent on the teaching team. “The TAs did not care” describes how my classes felt; it is not a claim about every person who has ever taught ST2334. A future run could be much better.
+
+## Verdict
+
+I would not take ST2334 by choice. The underlying concepts matter, but the module did not make them engaging, computational or connected to the rest of my degree. It felt like a general statistics requirement wearing a computing prerequisite chain.
+
+If it remains compulsory, the best improvement would be to rebuild the examples and assignments around real computing problems. Probability and statistics deserve a place in computer science. This particular experience did not make the case.
+
+*This review reflects the semester I took. Delivery, lecturers and assessments can change, so check recent information before treating the criticism as current fact.*

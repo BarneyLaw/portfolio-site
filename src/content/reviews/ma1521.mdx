@@ -1,0 +1,52 @@
+---
+name: "MA1521 Calculus for Computing (NUS)"
+type: "SOFTWARE"
+verdict: "MIXED"
+date: "2026-08-30"
+excerpt: "Useful and sometimes satisfying calculus held back by dry delivery and too little connection between the equations on paper and computation in practice."
+tags: ["course", "mathematics", "calculus", "nus"]
+image: "../../img/review/ma1521.webp"
+coverArt: "../../img/review/ma1521.webp"
+imageAlt: "Calculus curves and rates of change"
+comments: true
+---
+
+MA1521 contains good concepts and satisfying mathematics. I can see why calculus belongs in a computing degree, especially for graphics, simulation, optimisation and machine learning.
+
+The module itself was much harder to recommend. The lectures were ridiculously dry, some assignments produced a genuine “what am I looking at?” response, and the connection to computing was far weaker than the title promised.
+
+It is called *Calculus for Computing*, not *Calculus I, attended by computing students*. That distinction should matter.
+
+## Content overview
+
+Calculus studies change and accumulation. Limits formalise what it means for a function to approach a value. Derivatives measure local rates of change and provide information about slopes, extrema and how a small change in one quantity affects another. Integrals accumulate infinitely many small contributions into an area, total or average.
+
+The module develops techniques for differentiating and integrating functions, then applies them to problems involving optimisation and approximation. Sequences and series extend the idea of limiting behaviour to infinite sums, while multivariable calculus considers functions with several inputs. Partial derivatives and gradients describe how an output changes in different directions.
+
+These ideas have direct computational uses. A physics engine updates position from velocity and acceleration. A renderer integrates light arriving along paths and across surfaces. Optimisation follows derivatives through a parameter space. Numerical methods approximate quantities that are difficult or impossible to obtain symbolically. Even animation relies on curves and rates of change to create movement that does not look like a spreadsheet changing cells.
+
+That is a strong set of reasons for a computing student to learn calculus.
+
+## Where was the computing?
+
+My frustration is that these connections were not central enough. We spent much of the module manipulating equations on paper, but rarely crossed the bridge to how a program represents and uses the same idea.
+
+Consider integration. The analytic techniques matter, but computing frequently uses numerical approximation: divide an interval, sample the function and estimate the accumulated area. The approximation introduces questions about error, stability and computational cost. Suddenly the calculus is participating in an algorithm.
+
+Or take gradients. They are more memorable when connected to an optimisation routine that repeatedly updates a point, or to a surface whose steepest direction can be visualised. A Taylor expansion becomes more than another expression to derive when it is used to approximate an expensive function. Differential equations become more concrete when a small simulation steps through time and visibly diverges because the step size is poor.
+
+I am not asking for the mathematics to be replaced with coding exercises. The theory is the reason the methods work. But a computing-oriented module should let the two reinforce each other. Implementing a numerical approximation exposes assumptions that symbolic manipulation can hide, while the mathematics explains when the implementation can be trusted.
+
+## Delivery and assessment
+
+The lectures in my semester made already dense material feel even drier. Calculus benefits from motion and geometry: quantities changing, curves approaching limits, tangent lines evolving, and approximations converging. A presentation dominated by static manipulation can drain those ideas of their intuition.
+
+The assignments were also uneven. Some questions provided the satisfying experience of combining several concepts into one clean solution. Others felt detached from both the module's computing label and any motivation I could locate. Difficulty is not the issue by itself. A difficult problem can be excellent when the struggle reveals an idea. It is much less rewarding when the struggle is mainly symbolic endurance.
+
+## Verdict
+
+MA1521 is mixed. The mathematical content is valuable, and I am glad to have the foundations. Calculus appears throughout the areas of computing that interest me, particularly graphics and simulation.
+
+The module missed an opportunity to make those applications part of the learning process. Give students small programs, visual experiments or numerical methods alongside the equations. Show how the continuous mathematics of the page survives inside a discrete computer. That is where *Calculus for Computing* could become more than a name.
+
+*This review reflects the semester I took. Lecturers, assessment design and topic emphasis can change.*
