@@ -1,0 +1,111 @@
+---
+name: "RenowApp"
+status: SHIPPED
+order: 5
+tags: ["React Native", "Expo", "Supabase", "Jest"]
+meta: "May–Jul 2025 · React Native · Supabase"
+description: "A two-sided mobile marketplace for home-service requests and providers, with listing workflows, scheduling, image uploads, search, reviews, and completion records."
+codeSnippet: |-
+  const { data } = await supabase
+    .from("Listings")
+    .select("*")
+    .eq("accepted", false)
+    .order("created_at", { ascending: false });
+links:
+  - label: "github"
+    href: "https://github.com/CoderKee/RenowApp"
+image: "../../img/project/renow-completed-listings.png"
+imageAlt: "RenowApp's completed listings screen showing several home-service jobs and receipt actions"
+comments: true
+---
+
+## RenowApp: my first end-to-end application
+
+RenowApp was the first project I worked on that was large enough for every
+feature to affect several others. I built it with one teammate between May and
+July 2025 as a mobile marketplace for home services. A homeowner could post a
+repair or renovation request, while a service provider could advertise a
+service or accept an open request. Both sides then needed scheduling, progress
+tracking, reviews, and a record of the completed job.
+
+It was a student project rather than a production marketplace, but it forced me
+to think beyond isolated screens. A listing was not just a database row: it
+moved through a workflow, appeared in different users' views, carried images
+and dates, and had to stay consistent when either party changed it.
+
+## Architecture and data flow
+
+The client was built with React Native and Expo. React Navigation split the app
+into four bottom-level areas—home, listings, create listing, and profile—with
+nested stacks and tabs for request/service feeds and the different listing
+states. A small React context carried the current username between those
+screens, while screen-local hooks owned loading, pagination, filters, and modal
+state.
+
+Supabase provided PostgreSQL access and object storage. The mobile client
+queried it directly: request and service feeds added status predicates, ordered
+rows by creation time, and fetched five records at a time with range-based
+pagination. Search and filters were composed into the same query using
+case-insensitive title matching, service type, and minimum/maximum price.
+
+Images took a separate path. Expo's image picker returned a local URI, the app
+read it as Base64, decoded it into a buffer, and uploaded as many as three files
+to a Supabase Storage bucket. The listing stored the resulting object paths,
+and the detail and edit screens resolved those paths into public URLs.
+
+## What I built
+
+My contribution was centred on the marketplace workflow. I implemented the
+request and service home feeds, the full item-detail view, and the accept and
+unaccept transitions. I then split accepted work from claimed work so the same
+listing was presented from the correct side of the transaction.
+
+I added manual and navigation-triggered refreshes, paginated list loading, the
+edit flow, multi-image upload, and date selection for scheduling. The profile
+area gained a personal calendar that gathered scheduled tasks by day, plus
+completed-listing and receipt views. Later I added text search, type and price
+filters, and separated the review UI from the already crowded item-detail
+screen.
+
+The work crossed most layers of the app. A scheduling change touched listing
+creation, storage, detail rendering, accepted/claimed views, and the profile
+calendar. That was the first time I felt the cost of a data model decision
+propagating through an application rather than staying inside one component.
+
+## The hard part was state, not screens
+
+The UI had many screens, but the difficult bugs lived in the transitions
+between them. The same record could be open, accepted, claimed, completed, or
+being edited. Each transition changed which user could act on it and which tab
+should display it. Refreshing after a mutation also had to reset pagination;
+otherwise a screen could append stale rows or skip the beginning of the new
+result set.
+
+Scheduling introduced another consistency problem. Dates selected during
+creation needed to survive edits, appear in item details, and be merged into a
+user's calendar without confusing jobs they posted with jobs they accepted.
+This is where I started treating features as data flows rather than as buttons
+and pages.
+
+I also added component tests with Jest and React Native Testing Library around
+the filter modal, request/service feeds, custom controls, calendar, and review
+modal. The tests were modest, but they exposed how much easier a component is
+to verify when its state transitions and database boundary are explicit.
+
+## What I would change now
+
+The largest limitation is architectural: UI components call Supabase directly,
+so presentation, query construction, and workflow rules are tightly coupled.
+The prototype also used an application-managed user table instead of Supabase
+Auth. That made testing with usernames convenient, but it is not an
+authentication design I would ship.
+
+Today I would put a typed service layer between the screens and the backend,
+centralise listing-state transitions, and rely on a reviewed authentication
+provider with server-enforced authorisation. I would also model the workflow as
+an explicit state machine rather than a collection of booleans.
+
+That hindsight is the useful outcome of the project. RenowApp taught me how
+navigation, storage, asynchronous work, and shared state interact in a real
+application—and why a feature that works on one screen is not complete until
+the whole workflow stays coherent.
