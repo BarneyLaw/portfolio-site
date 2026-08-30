@@ -5,9 +5,11 @@ import Layout from "../../layouts/Layout.astro";
 import VerdictBadge from "../../components/astro/VerdictBadge.astro";
 import Tag from "../../components/astro/Tag.astro";
 import Hatch from "../../components/astro/Hatch.astro";
-import { getReviews } from "../../lib/content";
+import { getReviews, getReviewTags } from "../../lib/content";
+import { tagSlugs } from "../../lib/tags";
 
 const reviews = await getReviews();
+const tags = await getReviewTags();
 
 const filters = [
   { label: "all", id: "all" },
@@ -31,7 +33,7 @@ const BTN_INACTIVE =
 
     {/* Enhancement only: without JavaScript every review stays visible. */}
     <div
-      class="flex gap-2 mb-8 flex-wrap"
+      class="flex gap-2 mb-3 flex-wrap"
       id="review-filters"
       role="group"
       aria-label="Filter reviews by type"
@@ -50,12 +52,46 @@ const BTN_INACTIVE =
       }
     </div>
 
+    {/* A second, independent axis: type AND tag must both match. The whole
+        group is absent until some review carries a tag, so an empty set of
+        controls is never announced to a screen reader. */}
+    {
+      tags.length > 0 && (
+        <div
+          class="flex gap-2 mb-8 flex-wrap"
+          id="review-tag-filters"
+          role="group"
+          aria-label="Filter reviews by tag"
+        >
+          <button
+            type="button"
+            data-tag-filter="all"
+            aria-pressed="true"
+            class:list={[BTN_BASE, BTN_ACTIVE]}
+          >
+            all topics
+          </button>
+          {tags.map((tag) => (
+            <button
+              type="button"
+              data-tag-filter={tag.slug}
+              aria-pressed="false"
+              class:list={[BTN_BASE, BTN_INACTIVE]}
+            >
+              {tag.label} <span class="opacity-60">{tag.count}</span>
+            </button>
+          ))}
+        </div>
+      )
+    }
+
     <div class="flex flex-col gap-3" id="review-list">
       {
         reviews.map((review) => (
           <a
             href={`/reviews/${review.id}`}
             data-type={review.data.type}
+            data-tags={tagSlugs(review.data.tags).join(" ")}
             class="bg-card border border-border rounded p-4 flex gap-4 hover:border-primary/50 transition-colors cursor-pointer group"
           >
             {
@@ -84,14 +120,29 @@ const BTN_INACTIVE =
               <div class="text-[14px] font-mono text-muted-foreground leading-relaxed">
                 {review.data.excerpt}
               </div>
-              <div class="mt-2 text-[12px] font-mono text-muted-foreground">
-                {review.data.date}
+              <div class="mt-2 flex items-center gap-2 flex-wrap">
+                <span class="text-[12px] font-mono text-muted-foreground">
+                  {review.data.date}
+                </span>
+                {review.data.tags.map((tag) => (
+                  <Tag muted>{tag}</Tag>
+                ))}
               </div>
             </div>
           </a>
         ))
       }
     </div>
+
+    {/* Two axes make an empty combination reachable — hardware plus a
+        software-only tag. Without this the list would simply go blank. */}
+    <p
+      id="review-empty"
+      hidden
+      class="text-[14px] font-mono text-muted-foreground py-8 text-center"
+    >
+      no reviews match that combination.
+    </p>
   </main>
 
   <script>
@@ -101,26 +152,109 @@ const BTN_INACTIVE =
     const BTN_INACTIVE =
       "border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground";
 
-    const btns = Array.from(
+    const typeButtons = Array.from(
       document.querySelectorAll<HTMLElement>("#review-filters [data-filter]"),
+    );
+    const tagButtons = Array.from(
+      document.querySelectorAll<HTMLElement>("#review-tag-filters [data-tag-filter]"),
     );
     const rows = Array.from(
       document.querySelectorAll<HTMLElement>("#review-list [data-type]"),
     );
+    const empty = document.getElementById("review-empty");
 
-    for (const btn of btns) {
+    // Two independent axes, ANDed. "all" on an axis means "do not constrain".
+    let selectedType = "all";
+    let selectedTag = "all";
+
+    /** `"".split(/\s+/)` is `[""]`, so an untagged card would otherwise carry a
+        phantom empty tag. filter(Boolean) is what keeps it out. */
+    const tagsOf = (card: HTMLElement) =>
+      (card.dataset.tags ?? "").split(/\s+/).filter(Boolean);
+
+    function apply() {
+      let shown = 0;
+      for (const row of rows) {
+        const show =
+          (selectedType === "all" || row.dataset.type === selectedType) &&
+          (selectedTag === "all" || tagsOf(row).includes(selectedTag));
+        row.classList.toggle("hidden", !show);
+        if (show) shown += 1;
+      }
+      if (empty) empty.hidden = shown > 0;
+    }
+
+    function paint(buttons: HTMLElement[], active: HTMLElement) {
+      for (const b of buttons) {
+        const on = b === active;
+        b.className = `${BTN_BASE} ${on ? BTN_ACTIVE : BTN_INACTIVE}`;
+        b.setAttribute("aria-pressed", String(on));
+      }
+    }
+
+    /** Both selectors return false for a value no button offers, so a
+        hand-edited query string cannot leave every button unpressed. */
+    function selectType(value: string): boolean {
+      const btn = typeButtons.find((b) => b.dataset.filter === value);
+      if (!btn) return false;
+      selectedType = value;
+      paint(typeButtons, btn);
+      return true;
+    }
+
+    function selectTag(value: string): boolean {
+      const btn = tagButtons.find((b) => b.dataset.tagFilter === value);
+      if (!btn) return false;
+      selectedTag = value;
+      paint(tagButtons, btn);
+      return true;
+    }
+
+    /** Keeps the address bar in step so a filtered list can be shared.
+        replaceState, not pushState: clicking four filters in a row should not
+        leave four entries for the reader to back out through. */
+    function syncUrl() {
+      const url = new URL(window.location.href);
+      for (const [param, value] of [
+        ["type", selectedType],
+        ["tag", selectedTag],
+      ]) {
+        if (value === "all") url.searchParams.delete(param);
+        else url.searchParams.set(param, value);
+      }
+      window.history.replaceState(null, "", url);
+    }
+
+    for (const btn of typeButtons) {
       btn.addEventListener("click", () => {
-        const f = btn.dataset.filter;
-        for (const b of btns) {
-          const active = b === btn;
-          b.className = `${BTN_BASE} ${active ? BTN_ACTIVE : BTN_INACTIVE}`;
-          b.setAttribute("aria-pressed", String(active));
-        }
-        for (const row of rows) {
-          const show = f === "all" || row.dataset.type === f;
-          row.classList.toggle("hidden", !show);
+        const value = btn.dataset.filter;
+        if (value && selectType(value)) {
+          apply();
+          syncUrl();
         }
       });
     }
+
+    for (const btn of tagButtons) {
+      btn.addEventListener("click", () => {
+        const value = btn.dataset.tagFilter;
+        if (value && selectTag(value)) {
+          apply();
+          syncUrl();
+        }
+      });
+    }
+
+    // Deep link: /reviews?type=HARDWARE&tag=cpu — what a tag on a review's
+    // detail page points at. Query values are untrusted, and the selectors
+    // only ever compare them against buttons that already exist; nothing from
+    // the query string reaches the DOM as text or markup.
+    const params = new URLSearchParams(window.location.search);
+    const type = params.get("type");
+    const tag = params.get("tag");
+    let restored = false;
+    if (type !== null && selectType(type)) restored = true;
+    if (tag !== null && selectTag(tag)) restored = true;
+    if (restored) apply();
   </script>
 </Layout>
