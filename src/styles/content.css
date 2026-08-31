@@ -120,3 +120,21 @@
   list-style: decimal;
   padding-left: 1.25rem;
 }
+
+/* In-body images. The project and review detail pages float their sidebar, so
+   an image left in normal flow is too wide to share a line box with it and
+   drops underneath. Making the wrapper a block formatting context changes that:
+   a BFC box may not overlap a float's margin box, so the browser narrows it to
+   the column beside the sidebar — and back to full width once the writeup has
+   cleared it. The sidebar's own left margin supplies the gutter, so the image
+   never clips into it. */
+.mdx-content :is(p, figure):has(> img) {
+  display: flow-root;
+}
+.mdx-content img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+}
