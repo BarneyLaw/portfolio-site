@@ -29,8 +29,17 @@ real people.
 I joined the 2025 development cycle in July and August. My work covered a set
 of geriatric cognitive-assessment forms, followed by a larger migration away
 from MongoDB Realm calls made by the browser and towards a custom Express API.
-The second part was the more important architectural change because it moved
-database access and authentication behind a boundary the team controlled.
+The immediate reason for that migration was an account-provisioning deadlock.
+Authentication, authorisation, and database access were not separated cleanly:
+registering a new account was treated like any other protected database write,
+so the caller first had to be logged in. A new volunteer therefore could not
+create their own account, and every account had to be inserted manually by
+someone who already had access.
+
+The separate backend broke that circular dependency. It gave account creation
+an explicit bootstrap path while keeping patient data and operational actions
+behind server-enforced authentication and authorisation. It also moved database
+access behind an API boundary the team controlled.
 
 ## The system I was changing
 
@@ -48,9 +57,9 @@ not on operations from the screening domain.
 The target architecture introduced an Express server using the MongoDB driver.
 The browser called HTTP endpoints, a shared client attached a bearer token, and
 backend middleware verified the JWT before protected handlers reached the
-database. Public pre-registration and login/signup remained explicit exceptions;
+database. Login and signup became explicit unauthenticated bootstrap routes;
 patient records, form submission, station counts, profiles, and administrative
-operations were authenticated.
+operations remained authenticated.
 
 ## Migrating without stopping feature work
 
