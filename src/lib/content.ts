@@ -1,5 +1,7 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 
+import { tagSlug } from "./tags";
+
 // ── Content access layer ─────────────────────────────────────────────────
 // Single seam between pages and the content source. Today everything comes
 // from local MDX content collections. When a Go backend + database
@@ -81,6 +83,44 @@ export async function getReviews(): Promise<ReviewEntry[]> {
 
 export async function getReview(id: string): Promise<ReviewEntry | undefined> {
   return (await getReviews()).find((r) => r.id === id);
+}
+
+/** One tag, as it appears across the published reviews. */
+export interface TagFacet {
+  /** Canonical identity — what a filter button, a `data-tags` entry, or a
+      future `/reviews/tag/:slug` route matches on. Never empty (schema). */
+  slug: string;
+  /** Authored spelling, for display. When two reviews spell the same tag
+      differently, the one on the newest review wins — `getReviews()` is
+      already sorted, so this is deterministic rather than glob order. */
+  label: string;
+  /** How many published reviews carry it. Drafts and future-dated reviews are
+      excluded, so a count can never advertise a page that was not built. */
+  count: number;
+}
+
+/**
+ * Every tag on the published reviews, most-used first with the slug breaking
+ * ties — a total order, per publication rule 3, so the filter row cannot
+ * reshuffle between builds.
+ *
+ * This is the seam a tag filter or a per-tag archive route builds on: it is
+ * derived from the entries themselves, so a tag exists exactly as long as a
+ * published review still carries it and there is no separate list to prune.
+ */
+export async function getReviewTags(): Promise<TagFacet[]> {
+  const bySlug = new Map<string, TagFacet>();
+
+  for (const review of await getReviews()) {
+    for (const tag of review.data.tags) {
+      const slug = tagSlug(tag);
+      const seen = bySlug.get(slug);
+      if (seen) seen.count += 1;
+      else bySlug.set(slug, { slug, label: tag, count: 1 });
+    }
+  }
+
+  return [...bySlug.values()].sort((a, b) => b.count - a.count || a.slug.localeCompare(b.slug));
 }
 
 // ── Content registry ─────────────────────────────────────────────────────

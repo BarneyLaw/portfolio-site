@@ -586,6 +586,77 @@ test("filter controls match the data they filter", () => {
   }
 });
 
+test("review tag filters match the tags on the cards", () => {
+  // The tag axis is free-form: a tag exists because someone typed it in
+  // frontmatter. That makes both directions worth asserting — a button that
+  // selects nothing, and a tag no button can reach.
+  const html = readFileSync(join(dist, "reviews", "index.html"), "utf8");
+
+  const carried = new Set(
+    [...html.matchAll(/data-tags="([^"]*)"/g)].flatMap((m) =>
+      m[1].split(/\s+/).filter(Boolean),
+    ),
+  );
+  const group = html.match(/<div[^>]*id="review-tag-filters"[\s\S]*?<\/div>/)?.[0];
+
+  if (!group) {
+    // The group is deliberately absent when nothing is tagged. It must not be
+    // absent when something is.
+    assert.equal(carried.size, 0, "reviews carry tags but /reviews has no tag filter group");
+    return;
+  }
+
+  const buttons = [...group.matchAll(/data-tag-filter="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(buttons.includes("all"), '/reviews tag filters have no "all" button');
+  assert.ok(carried.size > 0, "/reviews has a tag filter group but no tagged cards");
+
+  for (const button of buttons) {
+    if (button === "all") continue;
+    assert.ok(carried.has(button), `/reviews: tag filter "${button}" matches no card`);
+  }
+  for (const tag of carried) {
+    assert.ok(buttons.includes(tag), `/reviews: tag "${tag}" has no filter button`);
+  }
+
+  // What a button matches on is also the ?tag= value the detail pages link
+  // to, so it has to be URL-safe — see tagSlug() in src/lib/tags.ts.
+  for (const tag of carried) {
+    assert.match(tag, /^[a-z0-9]+(-[a-z0-9]+)*$/, `/reviews: tag "${tag}" is not a slug`);
+  }
+});
+
+test("tags on a review detail page link to a filter that exists", () => {
+  const list = readFileSync(join(dist, "reviews", "index.html"), "utf8");
+  const known = new Set(
+    [...list.matchAll(/data-tag-filter="([^"]+)"/g)].map((m) => m[1]),
+  );
+
+  // routeOf normalises the separator, so this works on Windows too.
+  const detailPages = htmlFiles.filter((f) => /^\/reviews\/[^/]+$/.test(routeOf(f)));
+  assert.ok(detailPages.length > 0, "no review detail pages were built");
+
+  let linked = 0;
+  for (const file of detailPages) {
+    const html = readFileSync(file, "utf8");
+    for (const [, tag] of html.matchAll(/href="\/reviews\?tag=([^"]+)"/g)) {
+      linked += 1;
+      assert.ok(
+        known.has(decodeURIComponent(tag)),
+        `${routeOf(file)} links to ?tag=${tag}, which /reviews offers no filter for`,
+      );
+    }
+  }
+  assert.ok(linked > 0, "no review detail page links any of its tags");
+});
+
+test("the empty-filter message is hidden for a non-JS reader", () => {
+  // It only ever appears once a script has narrowed the list to nothing.
+  const html = readFileSync(join(dist, "reviews", "index.html"), "utf8");
+  const empty = html.match(/<p[^>]*id="review-empty"[^>]*>/)?.[0];
+  assert.ok(empty, "/reviews has no empty-filter message");
+  assert.match(empty, /\shidden(\s|>)/, "/reviews ships its empty-filter message visible");
+});
+
 test("filtering and paging never hide content from a non-JS reader", () => {
   // Cards must not ship pre-hidden: the unfiltered list is the no-JS default.
   for (const page of ["projects", "reviews"]) {

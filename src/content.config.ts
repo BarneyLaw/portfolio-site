@@ -2,6 +2,8 @@ import { defineCollection, type SchemaContext } from "astro:content";
 import { z } from "astro/zod";
 import { glob } from "astro/loaders";
 
+import { tagSlug } from "./lib/tags";
+
 // Every collection is prose → one MDX file per entry, frontmatter for the
 // structured fields and the body for the writeup. See src/lib/content.ts for
 // the seam where these can later be swapped for a Go/Postgres-backed query.
@@ -30,6 +32,39 @@ const draft = z.boolean().default(false);
  * explicitly sets `comments: true` should emit `comments_enabled: true`."
  */
 const comments = z.boolean().default(false);
+
+/**
+ * Free-form categories for a review: "mod-review", "game", "ide", anything.
+ * There is no allowlist — a new tag is created by typing it in frontmatter.
+ *
+ * The values are authored for display, but they are matched on by
+ * `tagSlug()` (src/lib/tags.ts), so "Mod Review", "mod review" and
+ * "mod-review" are all the *same* tag and land in one filter bucket. That
+ * normalisation is what makes these safe to filter and to put in a URL later
+ * without an allowlist to maintain.
+ *
+ * Two rules are enforced here rather than left to a page:
+ *   - a tag must slug to something non-empty, so " " and "///" are rejected
+ *     instead of silently becoming an unmatchable blank pill;
+ *   - tags must be distinct *after* normalisation, so an entry cannot carry
+ *     "IDE" and "ide" and render the same filter twice.
+ *
+ * Defaults to `[]`: tagging is optional and an untagged review is not a
+ * schema error. Reviews only — `projects.tags` is a different, required field
+ * describing a stack, and is deliberately left alone.
+ */
+const tags = z
+  .array(
+    z
+      .string()
+      .trim()
+      .refine((tag) => tagSlug(tag).length > 0, "a tag needs at least one letter or digit"),
+  )
+  .default([])
+  .refine(
+    (list) => new Set(list.map(tagSlug)).size === list.length,
+    'tags must be distinct once normalised — "Mod Review" and "mod-review" are the same tag',
+  );
 
 /**
  * Media fields, shared by all three collections. The two image slots had
@@ -111,6 +146,7 @@ const reviews = defineCollection({
       name: z.string(),
       date: isoDate,
       excerpt: z.string(),
+      tags,
       draft,
       comments,
       ...media(ctx),

@@ -175,14 +175,21 @@ test("toggles expose their state", () => {
 test("filter controls expose their pressed state", () => {
   for (const page of ["projects", "reviews"]) {
     const html = readFileSync(join(dist, page, "index.html"), "utf8");
-    const group = html.match(/<div[^>]*role="group"[^>]*>[\s\S]*?<\/div>/)?.[0];
-    assert.ok(group, `/${page} filters are not a labelled group`);
-    assert.match(group, /aria-label="[^"]+"/, `/${page} filter group has no label`);
+    // Every group, not just the first: /reviews filters on two independent
+    // axes, and a second unlabelled group would otherwise go unchecked.
+    const groups = [...html.matchAll(/<div[^>]*role="group"[^>]*>[\s\S]*?<\/div>/g)].map(
+      (m) => m[0],
+    );
+    assert.ok(groups.length > 0, `/${page} filters are not a labelled group`);
 
-    const buttons = [...group.matchAll(/<button\s([^>]*)>/g)];
-    assert.ok(buttons.length > 0, `/${page} has no filter buttons`);
-    for (const [, attrs] of buttons) {
-      assert.match(attrs, /aria-pressed="(true|false)"/, `/${page} filter button has no state`);
+    for (const group of groups) {
+      assert.match(group, /aria-label="[^"]+"/, `/${page} filter group has no label`);
+
+      const buttons = [...group.matchAll(/<button\s([^>]*)>/g)];
+      assert.ok(buttons.length > 0, `/${page} has no filter buttons`);
+      for (const [, attrs] of buttons) {
+        assert.match(attrs, /aria-pressed="(true|false)"/, `/${page} filter button has no state`);
+      }
     }
   }
 });

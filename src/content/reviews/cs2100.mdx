@@ -1,0 +1,56 @@
+---
+name: "CS2100 Computer Organisation (NUS)"
+type: "SOFTWARE"
+verdict: "RECOMMENDED"
+date: "2026-08-30"
+excerpt: "A fascinating descent from C and MIPS to datapaths, logic gates and voltage levels—paired with a workload apparently designed in the same place as eternal punishment."
+tags: ["course", "computer-architecture", "assembly", "hardware", "nus"]
+image: "../../img/review/cs2100.webp"
+coverArt: "../../img/review/cs2100.webp"
+imageAlt: "A processor datapath built from digital logic"
+comments: true
+---
+
+I recommend CS2100, but beware.
+
+This module teaches how a computer works by steadily removing every comfortable abstraction you have acquired. A program stops being Java or Source. It becomes C, then MIPS instructions, then encoded bits, then signals moving through a datapath assembled from logic gates. Eventually, the advanced instrument on your desk has devolved into arrangements of zeroes and ones represented by physical voltage levels.
+
+That journey is genuinely fascinating. The workload, unfortunately, seems to have arrived from hell itself.
+
+## Content overview
+
+The module begins with C, data representation and number systems. Integers, characters and floating-point values are no longer abstract mathematical objects; they must fit into finite sequences of bits. We spent a great deal of time converting between binary, decimal and hexadecimal, performing arithmetic manually, and reasoning about what happens when the representation runs out of space.
+
+Pointers and memory then make C feel considerably less friendly. Arrays, addresses and functions reveal the machine-oriented model that higher-level languages normally hide. A value lives somewhere. A pointer names that location. An innocent indexing error can send the program exploring memory it was never invited to visit.
+
+From there, the course moves into MIPS assembly. We wrote programs using a small instruction set, registers, branches, loads and stores. High-level constructs have to be rebuilt by hand: a loop becomes comparisons and jumps, a function call becomes a calling convention, and a local variable may become a stack offset that you must manage yourself.
+
+Why not ask us to use a C compiler and inspect the generated MIPS? Apparently the point was for us to *be* the compiler.
+
+The second half examines the processor that executes those instructions. We studied instruction encoding, the datapath and control signals, followed by Boolean algebra, Karnaugh maps and digital logic. Combinational components compute outputs from current inputs, while sequential circuits introduce state and clocks. Pipelining explains how multiple instructions can occupy different processing stages at once, and caches show how a small amount of fast memory can hide some of the enormous latency gap to main memory.
+
+By the end, the layers connect: source-level operations become assembly instructions; instructions drive the processor; the processor is built from digital components; and those components ultimately distinguish physical signal levels.
+
+## The computer part of computer science
+
+This is one of the best modules for anyone interested in the lower half of the stack. Graphics, compilers, operating systems and performance engineering all become easier to appreciate once the hardware is no longer a sealed box.
+
+A graphics workload is not merely “a lot of calculations.” It is a pattern of instructions and memory accesses executed by a particular architecture. A compiler is not just translating one syntax into another; it is choosing instructions, registers and layouts for a target machine. A cache-friendly program is not an incantation from a performance blog. It is exploiting how the memory hierarchy actually moves data.
+
+The historical aspect is interesting too. MIPS may feel archaic when modern desktops and phones use much more complex systems, but its relative simplicity makes the essential ideas visible. Reduced instruction set architectures emerged from a desire to make instruction execution and implementation more regular. The specific assembly language is not the final destination; it is a clean specimen through which to study the architecture.
+
+## Workload from hell
+
+CS2100 would have been one of my favourite modules if not for the workload. The amount of manual arithmetic was exhausting. Binary and hexadecimal are conceptually simple, but a long chain of conversions, offsets and encodings creates endless opportunities to drop one bit and ruin everything after it. Your eyes do not literally bleed, but the module makes a respectable attempt.
+
+Assembly exercises are similarly unforgiving. At a higher level, a function call is one expression. In MIPS, you must think about registers, arguments, return addresses, stack frames and control flow. That detail is exactly why the exercise is educational, but multiplying it across weekly work can become overwhelming.
+
+The logic-design portion adds another mode of thinking. One week you are debugging a C pointer; soon after, you are simplifying a Boolean expression and drawing a circuit. Each topic belongs in the story, yet the pace makes it difficult to pause and enjoy the machinery.
+
+## Verdict
+
+CS2100 is recommended for the content and approached with caution for the workload. It answers one of the most fundamental questions in the degree: what is the computer actually doing when our code runs?
+
+The answer stretches from language abstractions to instruction sets, processor organisation, memory hierarchies and logic gates. If you care about graphics, compilers, systems or hardware, this module provides essential foundations. I only wish it gave us more time to appreciate them before assigning the next page of manual hexadecimal arithmetic.
+
+*This review reflects the semester I took. The current lecture sequence and assessments may differ.*

@@ -1,0 +1,52 @@
+---
+name: "CS2040S Data Structures and Algorithms (NUS)"
+type: "SOFTWARE"
+verdict: "RECOMMENDED"
+date: "2026-08-30"
+excerpt: "The algorithmic core of the degree: broad, enjoyable and essential, although I wanted more chances to implement every structure we studied."
+tags: ["course", "algorithms", "data-structures", "nus"]
+image: "../../img/review/cs2040s.webp"
+coverArt: "../../img/review/cs2040s.webp"
+imageAlt: "Data structures and algorithmic paths"
+comments: true
+---
+
+CS2040S is one of the fundamental modules of both programming and the Computer Science degree. It provides the toolbox that later courses casually assume you already own: ways to store data, ways to search it, ways to order it, and ways to decide whether an approach will finish before the universe does.
+
+It is also a good beginning to the lifelong LeetCode grind, if that is the road you wish to walk. Fortunately, the module is more interesting than interview preparation. Algorithms are not just tricks for passing an online judge; they are compact solutions to recurring computational problems.
+
+## Content overview
+
+The course moves through a wide range of data structures and algorithms. We studied asymptotic analysis so that runtime could be discussed independently of one laptop or one lucky input. Searching and sorting established the basic questions: how much work is required, what information can be exploited, and what trade-offs are hidden behind an apparently simple operation?
+
+Linear structures such as arrays, linked lists, stacks and queues show how representation changes the cost of access and updates. Trees then introduce hierarchy. Binary search trees, balanced structures and heaps provide different guarantees depending on whether you care most about lookup, ordered traversal or repeatedly extracting the highest-priority item.
+
+Hash tables aim for fast access through an entirely different idea, turning keys into locations and then dealing with the awkward fact that different keys sometimes want the same place. Graph algorithms expand the setting again: breadth-first and depth-first search, shortest paths, spanning trees and connectivity let us reason about networks of relationships rather than a single sequence.
+
+The final portions move towards broader problem-solving techniques such as greedy algorithms and dynamic programming. Dynamic programming is especially important because it changes how you see repeated work. A problem that appears to require exploring an enormous tree of choices can sometimes be reduced to a manageable collection of overlapping states. The difficult part is rarely writing the table. It is discovering what the state should mean.
+
+## Why the module works
+
+The module was taught in an enjoyable way. Good algorithm teaching makes the ideas feel motivated rather than delivered as sacred recipes. A heap is easier to remember when you understand the operation it optimises. Dijkstra's algorithm makes more sense when you know why the next settled vertex is safe. The proof and the implementation should explain each other.
+
+CS2040S also trains a habit that applies far beyond the syllabus: before coding, identify the structure of the problem. Is the input really a graph? Does the task require ordering, membership or repeated minimum queries? Are the subproblems independent, or are we recomputing the same state? Choosing the representation is often most of the solution.
+
+My main disappointment was the amount of implementation practice. I would have liked more small programming assignments—nothing enormous, just enough to code each major structure or algorithm once. Tracing an AVL-tree rotation on paper and implementing one are different experiences. The compiler has a remarkable ability to discover every detail your mental model politely ignored.
+
+Writing the algorithms also builds useful mechanical intuition. You remember why boundary conditions matter after a binary search loops forever, and you understand graph visitation states more deeply after accidentally inserting the same vertex into a queue several thousand times.
+
+## Assessments and zeroes
+
+The exams were not easy, but the sample papers made their structure relatively predictable. Knowing the style of questions meant the challenge was mostly in the reasoning rather than deciphering an unfamiliar format on the day.
+
+Marking could still be unforgiving. An algorithm that fails on a valid case is not a slower correct algorithm; it is incorrect. That can lead to the unpleasant surprise of receiving zero for an idea that seemed close. From a grading perspective, I understand it: one counterexample is enough to disprove correctness. From a student perspective, watching an entire answer evaporate because of one missed case remains painful.
+
+This is also where proof skills from CS1231S become practical. You need more than an intuition that an algorithm “looks right.” You need an invariant, an argument that each step preserves it, and a reason the final state implies the desired result.
+
+## Verdict
+
+CS2040S is essential and recommended. It supplies the vocabulary for reasoning about efficient programs and the basic structures that appear almost everywhere else in computer science.
+
+I only wish the module had made us implement more of what we learned. An algorithm becomes much more convincing after you have personally broken it in six different ways and finally made every test pass.
+
+*This review reflects the semester I took. The exact algorithm list and assessment format can change.*
