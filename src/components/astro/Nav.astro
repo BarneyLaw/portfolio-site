@@ -1,5 +1,5 @@
 ---
-import PacketSprite from "./PacketSpriteSvg.astro";
+import PacketSprite from "./PacketSprite.astro";
 import { NAV_LINKS } from "../../lib/site";
 
 const path = Astro.url.pathname;
@@ -102,13 +102,14 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
 
   /* Patrol flight: hop right until just before the first nav link, then hop
      back — `alternate` gives the return leg, steps() keeps it frame-by-frame
-     like an old marquee. The 48px clearance = 42px sprite + 6px margin;
-     top offset is half the 33px sprite height. --pc-leg is the duration of one
-     leg; PacketSprite inherits it to flip the mascot's facing at each turn. */
+     like an old marquee. The 50px clearance = 44px sprite + 6px margin;
+     top offset is half the 35px sprite height, rounded up. --pc-leg is the
+     duration of one leg; PacketSprite inherits it to flip the mascot's facing
+     at each turn. */
   .pc-packet {
     --pc-leg: 4.5s;
     position: absolute;
-    top: calc(50% - 17px);
+    top: calc(50% - 18px);
     left: 6px;
     padding: 0;
     border: 0;
@@ -124,7 +125,7 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
       left: 6px;
     }
     to {
-      left: max(6px, calc(100% - 48px));
+      left: max(6px, calc(100% - 50px));
     }
   }
   @media (prefers-reduced-motion: reduce) {
