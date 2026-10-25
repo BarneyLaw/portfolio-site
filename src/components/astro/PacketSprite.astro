@@ -9,7 +9,11 @@
 // caller's patrol; the cycle length comes from --pc-leg (set by Nav, the
 // element that owns the patrol), so the two animations can never drift apart.
 interface Props {
-  /** Size of one sprite pixel in CSS px. Keep it a whole number. */
+  /**
+   * Size of one sprite pixel in CSS px. Whole numbers keep every art pixel
+   * the same size; fractional values (e.g. 1.5) stay sharp but some pixels
+   * come out a device pixel wider than others.
+   */
   px?: number;
   class?: string;
 }
