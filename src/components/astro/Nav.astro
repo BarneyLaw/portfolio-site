@@ -1,5 +1,5 @@
 ---
-import PacketSprite from "./PacketSpriteSvg.astro";
+import PacketSprite from "./PacketSprite.astro";
 import { NAV_LINKS } from "../../lib/site";
 
 const path = Astro.url.pathname;
@@ -36,7 +36,7 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
         aria-pressed="false"
         title="Click to pause/resume the mascot"
       >
-        <PacketSprite />
+        <PacketSprite px={1.35} />
       </button>
     </div>
 
@@ -102,14 +102,19 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
 
   /* Patrol flight: hop right until just before the first nav link, then hop
      back — `alternate` gives the return leg, steps() keeps it frame-by-frame
-     like an old marquee. The 48px clearance = 42px sprite + 6px margin;
-     top offset is half the 33px sprite height. --pc-leg is the duration of one
-     leg; PacketSprite inherits it to flip the mascot's facing at each turn. */
+     like an old marquee. Offsets are expressed through `translate`, whose
+     percentages resolve against the button (i.e. the sprite) itself, so the
+     patrol keeps a 6px margin at both ends and stays vertically centred at
+     any PacketSprite size — `left` and `translate` interpolate together, so
+     every step still lands on a straight line between the two ends. --pc-leg
+     is the duration of one leg; PacketSprite inherits it to flip the mascot's
+     facing at each turn. */
   .pc-packet {
     --pc-leg: 4.5s;
     position: absolute;
-    top: calc(50% - 17px);
+    top: 50%;
     left: 6px;
+    translate: 0 -50%;
     padding: 0;
     border: 0;
     background: none;
@@ -122,9 +127,11 @@ const isActive = (href: string) => path === href || path.startsWith(href + "/");
   @keyframes pc-fly {
     from {
       left: 6px;
+      translate: 0 -50%;
     }
     to {
-      left: max(6px, calc(100% - 48px));
+      left: calc(100% - 6px);
+      translate: -100% -50%;
     }
   }
   @media (prefers-reduced-motion: reduce) {

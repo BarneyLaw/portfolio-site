@@ -1,136 +1,83 @@
 ---
-// Pixel-art packet mascot. Each pixel map is compiled to a single box-shadow
-// string at build time, so a facing ships as one div and zero JS. Each
-// character in a map is a key into COLORS; "." is transparent.
+// Pixel-art packet mascot. The art lives in public/packet-icon-2.png: a
+// 100×100 canvas with the sprite drawn 1:1 in a 44×35 box at (21, 30). The
+// canvas is cropped to that box here rather than in the file, so the PNG can
+// keep being edited as-is; if the art moves or resizes on the canvas, update
+// ART to match.
 //
-// Both facings render stacked; a CSS animation shows the right-facing one on
-// the outbound leg of the caller's patrol and the left-facing one on the
-// return leg. The cycle length comes from --pc-leg (set by Nav, the element
-// that owns the patrol), so the two animations can never drift apart.
+// The art faces right. A CSS animation mirrors it for the return leg of the
+// caller's patrol; the cycle length comes from --pc-leg (set by Nav, the
+// element that owns the patrol), so the two animations can never drift apart.
 interface Props {
-  /** Size of one pixel in CSS px. */
+  /**
+   * Size of one sprite pixel in CSS px. Whole numbers keep every art pixel
+   * the same size; fractional values (e.g. 1.5) stay sharp but some pixels
+   * come out a device pixel wider than others.
+   */
   px?: number;
   class?: string;
 }
-const { px = 3, class: className } = Astro.props;
+const { px = 1, class: className } = Astro.props;
 
-// const MAP = [
-//   "..OOOOOOOOOO..",
-//   ".OOOBBBBBBOOO.",
-//   "OBBOOBBBBOOBBO",
-//   "OBBBBOBBOBBBBO",
-//   "OBBBBBOOBBBBBO",
-//   "OBWWWBBBBWWWBO",
-//   "OBWPSBBBBWPSBO",
-//   "OBWWWBBBBWWWBO",
-//   "OBKBBBOOBBBKBO",
-//   ".OBBBBBBBBBBO.",
-//   "..OOOOOOOOOO..",
-// ];
+const SRC = "/packet-icon-2.png";
+const CANVAS = 100;
+const ART = { x: 21, y: 30, w: 44, h: 35 };
 
-const MAP_LEFT = [
-  "...OOOOOOOOOOO...",
-  ".OOOBBBBBBBBBOOO.",
-  "OOBBBBBBBBBBBBBOO",
-  "OBOOBBBBBBBBBOOBO",
-  "OBBBOOBBBBBOOBBBO",
-  "OBBBBBOOBOOBBBBBO",
-  "OBBBWWBBOBBWWBBBO",
-  "OBBWWWBBBBWWWBBBO",
-  "OBBbWWBBBBbWWBBBO",
-  "OBBWWWBBBBWWWBBBO",
-  "OOOBBBBBBBBBBBOOO",
-  "..OOOOOOOOOOOOO..",
-];
-
-const MAP_RIGHT = [
-    "...OOOOOOOOOOO...",
-    ".OOOBBBBBBBBBOOO.",
-    "OOBBBBBBBBBBBBBOO",
-    "OBOOBBBBBBBBBOOBO",
-    "OBBBOOBBBBBOOBBBO",
-    "OBBBBBOOBOOBBBBBO",
-    "OBBBWWBBOBBWWBBBO",
-    "OBBBWWWBBBBWWWBBO",
-    "OBBBWWbBBBBWWbBBO",
-    "OBBBWWWBBBBWWWBBO",
-    "OOOBBBBBBBBBBBOOO",
-    "..OOOOOOOOOOOOO..",
-];
-
-
-const COLORS: Record<string, string> = {
-  b: "#00b73f", // eye-blue
-  O: "#0d1220", // outline
-  B: "#2563eb", // body blue
-  L: "#7ab0ff", // envelope-flap highlight
-  W: "#ffffff", // eye white
-  P: "#0d1220", // pupil
-  S: "#9fc1ff", // eye shine
-  K: "#ff9db0", // blush
-};
-// The 0.5px spread makes neighboring pixels overlap slightly; without it,
-// fractional display scaling (e.g. Windows at 125%) leaves anti-aliasing
-// seams between the shadow squares that read as dark grid lines.
-const toShadow = (map: string[]) =>
-  map
-    .flatMap((row, y) =>
-      [...row].flatMap((ch, x) =>
-        COLORS[ch] ? [`${x * px}px ${y * px}px 0 0.5px ${COLORS[ch]}`] : [],
-      ),
-    )
-    .join(",");
-
-const width = MAP_RIGHT[0].length * px;
-const height = MAP_RIGHT.length * px;
-const pixelStyle = `width:${px}px;height:${px}px;--bob:-${px}px`;
+const width = ART.w * px;
+const height = ART.h * px;
 ---
 
 <div
   class:list={["packet-sprite", className]}
-  style={`width:${width}px;height:${height}px`}
+  style={`width:${width}px;height:${height}px;--bob:-${px}px`}
   aria-hidden="true"
 >
-  <div class="packet-px packet-facing-right" style={`${pixelStyle};box-shadow:${toShadow(MAP_RIGHT)}`}>
-  </div>
-  <div class="packet-px packet-facing-left" style={`${pixelStyle};box-shadow:${toShadow(MAP_LEFT)}`}>
+  <div class="packet-art">
+    <img
+      src={SRC}
+      alt=""
+      width={CANVAS * px}
+      height={CANVAS * px}
+      style={`left:-${ART.x * px}px;top:-${ART.y * px}px`}
+      draggable="false"
+    />
   </div>
 </div>
 
 <style>
-  /* Both facings occupy the same spot; only one is opaque at a time. */
+  /* Three layers so the two transforms never fight: the outer box bobs, the
+     middle box is cropped to the art (so mirroring it flips around the art's
+     own centre, not the canvas's) and the image sits offset inside it. */
   .packet-sprite {
     position: relative;
+    animation: packet-bob 0.4s steps(2, jump-none) infinite;
   }
-  .packet-px {
+  .packet-art {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    animation: packet-face calc(var(--pc-leg, 4.5s) * 2) steps(2, jump-none)
+      infinite;
+  }
+  /* pixelated keeps hard pixel edges under fractional display scaling (e.g.
+     Windows at 125%), where the default smoothing blurs the art. */
+  .packet-art img {
     position: absolute;
-    top: 0;
-    left: 0;
-  }
-
-  /* Two animations per facing: the 2-frame vertical bob, stepped so it snaps
-     between frames, and one facing flip per full there-and-back patrol —
-     steps(2, jump-none) holds the from-value for the outbound leg and the
-     to-value for the return. */
-  .packet-facing-right {
-    opacity: 1;
-    animation:
-      packet-bob 0.4s steps(2, jump-none) infinite,
-      packet-face-right calc(var(--pc-leg, 4.5s) * 2) steps(2, jump-none) infinite;
-  }
-  .packet-facing-left {
-    opacity: 0;
-    animation:
-      packet-bob 0.4s steps(2, jump-none) infinite,
-      packet-face-left calc(var(--pc-leg, 4.5s) * 2) steps(2, jump-none) infinite;
+    max-width: none;
+    image-rendering: pixelated;
   }
 
   /* Freeze the bob and the facing when an ancestor (the nav's pause button)
      is paused, so the mascot stops looking where it stopped. */
-  :global(.is-paused) .packet-px {
+  :global(.is-paused) .packet-sprite,
+  :global(.is-paused) .packet-art {
     animation-play-state: paused;
   }
 
+  /* The bob is a stepped 2-frame hop; the facing flip happens once per full
+     there-and-back patrol — steps(2, jump-none) holds the from-value for the
+     outbound leg and the to-value for the return. */
   @keyframes packet-bob {
     from {
       transform: translateY(0);
@@ -139,27 +86,20 @@ const pixelStyle = `width:${px}px;height:${px}px;--bob:-${px}px`;
       transform: translateY(var(--bob));
     }
   }
-  @keyframes packet-face-right {
+  @keyframes packet-face {
     from {
-      opacity: 1;
+      transform: none;
     }
     to {
-      opacity: 0;
-    }
-  }
-  @keyframes packet-face-left {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
+      transform: scaleX(-1);
     }
   }
 
   /* No patrol under reduced motion, so there is no direction to track: hold
-     the right-facing frame (the opacity base values above). */
+     the right-facing frame. */
   @media (prefers-reduced-motion: reduce) {
-    .packet-px {
+    .packet-sprite,
+    .packet-art {
       animation: none;
     }
   }

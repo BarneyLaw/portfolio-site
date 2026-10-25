@@ -1,9 +1,9 @@
 ---
 // Renders a palette + RLE sprite (produced by scripts/pixelize.mjs) as static
 // SVG. The runs are expanded into one <path> per colour at build time, so the
-// drawing is 27-ish elements of plain markup and ships zero JavaScript — the
-// same trade PacketSprite.astro makes with box-shadow, which only stays cheap
-// for sprites of a couple of hundred pixels.
+// drawing is 27-ish elements of plain markup and ships zero JavaScript. A
+// box-shadow-per-pixel sprite (PacketSpriteSvg.astro's predecessor) would make
+// the same trade, but only stays cheap for a couple of hundred pixels.
 interface Sprite {
   w: number;
   h: number;
